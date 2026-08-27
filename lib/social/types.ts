@@ -18,6 +18,17 @@ export type SocialPost = {
   comments?: number;
 };
 
-export function socialPostId(platform: SocialPlatform, externalId: string) {
-  return `${platform}:${externalId}`;
-}
+export type SocialPostRow = {
+  platform: SocialPlatform;
+  external_id: string;
+  author_name: string;
+  text: string | null;
+  media_url: string | null;
+  thumbnail_url: string | null;
+  media_type: SocialMediaType | null;
+  post_url: string;
+  created_at: string;
+  likes: number | null;
+  comments: number | null;
+  fetched_at?: string;
+};

@@ -1,5 +1,6 @@
 import { getPlatformCredentials } from "@/lib/social/accounts";
-import { socialPostId, type SocialPost } from "@/lib/social/types";
+import { postId } from "@/lib/social/posts";
+import type { SocialPost } from "@/lib/social/types";
 
 const FIELDS = [
   "id",
@@ -67,7 +68,7 @@ function toPost(media: InstagramMedia, fallbackAuthor: string): SocialPost | nul
     asString(media.thumbnail_url) ?? asString(child?.thumbnail_url);
 
   return {
-    id: socialPostId("instagram", id),
+    id: postId("instagram", id),
     platform: "instagram",
     author: asString(media.username) ?? fallbackAuthor,
     text: asString(media.caption),
