@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getRequestOrigin } from "@/lib/supabase/request-origin";
 
 const DEFAULT_REDIRECT = "/dashboard";
 const DETAILS_PATH = "/auth/details";
@@ -16,7 +17,8 @@ function resolveRedirectPath(nextParam: string | null): string {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getRequestOrigin(request);
   const code = searchParams.get("code");
   const next = resolveRedirectPath(searchParams.get("next"));
 
