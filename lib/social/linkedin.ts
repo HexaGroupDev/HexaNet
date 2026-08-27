@@ -1,6 +1,5 @@
 import { getPlatformCredentials } from "@/lib/social/accounts";
-import { postId } from "@/lib/social/posts";
-import type { SocialPost } from "@/lib/social/types";
+import { socialPostId, type SocialPost } from "@/lib/social/types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -43,7 +42,7 @@ function toPost(
   const landing = asString(element.contentLandingPage);
 
   return {
-    id: postId("linkedin", id),
+    id: socialPostId("linkedin", id),
     platform: "linkedin",
     author,
     text: commentary ? stripCommentary(commentary) : articleTitle,

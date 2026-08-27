@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Service-role client for cron / server jobs. Never import this from
+ * Service-role client for server jobs. Never import this from
  * client components — it bypasses RLS.
  */
 export function createAdminClient() {

@@ -9,7 +9,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getRecentSocialPosts } from "@/lib/social/posts";
+import { loadSocialPosts } from "@/lib/social/load-posts";
 import type { SocialPost } from "@/lib/social/types";
 import { cn } from "@/lib/utils";
 
@@ -43,8 +43,8 @@ function EmptyWall() {
         </EmptyMedia>
         <EmptyTitle>No posts yet</EmptyTitle>
         <EmptyDescription>
-          Latest Instagram, TikTok, and LinkedIn posts will show up here after
-          the first sync.
+          Latest Instagram, TikTok, and LinkedIn posts will show up here once
+          accounts are connected.
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -78,7 +78,7 @@ export async function SocialMediaWall({
   showHeading?: boolean;
   columns?: 2 | 3;
 }) {
-  const posts = await getRecentSocialPosts(limit);
+  const posts = await loadSocialPosts(limit);
 
   return (
     <section className="flex flex-col gap-3">

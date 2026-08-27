@@ -3,8 +3,7 @@ import {
   tokenNeedsRefresh,
   updateAccountTokens,
 } from "@/lib/social/accounts";
-import { postId } from "@/lib/social/posts";
-import type { SocialPost } from "@/lib/social/types";
+import { socialPostId, type SocialPost } from "@/lib/social/types";
 
 const VIDEO_FIELDS = [
   "id",
@@ -94,7 +93,7 @@ function toPost(video: TikTokVideo, author: string): SocialPost | null {
   const cover = asString(video.cover_image_url);
 
   return {
-    id: postId("tiktok", id),
+    id: socialPostId("tiktok", id),
     platform: "tiktok",
     author,
     text,
