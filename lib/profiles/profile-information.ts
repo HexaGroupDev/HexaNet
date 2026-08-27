@@ -2,6 +2,13 @@ import { normalizeSpotifyUrl } from "@/lib/spotify/oembed";
 
 export const MAX_PROFILE_LANGUAGES = 3;
 
+export type ProfileInformation = {
+  birthday: string | null;
+  languages: string[];
+  hometown: string | null;
+  favoriteSpotifyUrl: string | null;
+};
+
 export const PROFILE_LANGUAGES = [
   { code: "EN", name: "English" },
   { code: "FR", name: "French" },
