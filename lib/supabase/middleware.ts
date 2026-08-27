@@ -10,8 +10,7 @@ function hasAuthCookie(request: NextRequest) {
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/auth')
-  const isCronRoute = pathname.startsWith('/api/cron')
-  const isPublicRoute = pathname === '/' || isAuthRoute || isCronRoute
+  const isPublicRoute = pathname === '/' || isAuthRoute
   const sessionCookiePresent = hasAuthCookie(request)
 
   // No session cookie: skip Auth network work on public routes, and redirect
