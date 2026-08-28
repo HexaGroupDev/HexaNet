@@ -16,13 +16,14 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useScreenAlert } from "@/components/screen-alert";
 
 export default function Page() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { show } = useScreenAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextParam = searchParams.get("next");
@@ -35,7 +36,6 @@ export default function Page() {
     e.preventDefault();
     const supabase = createClient();
     setIsLoading(true);
-    setError(null);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -45,7 +45,7 @@ export default function Page() {
       if (error) throw error;
       router.push(nextPath);
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      show(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -53,13 +53,12 @@ export default function Page() {
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
-    setError(null);
 
     try {
       const { error } = await signInWithGoogle(nextPath);
       if (error) throw error;
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      show(error instanceof Error ? error.message : "An error occurred");
       setIsGoogleLoading(false);
     }
   };
@@ -107,28 +106,29 @@ export default function Page() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Login"}
             </Button>
-            <div className="flex items-center justify-center gap-3">
-              <Separator className="flex-1" />
-              <p className="text-xs font-light opacity-50">OR</p>
-              <Separator className="flex-1" />
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              disabled={isLoading || isGoogleLoading}
-              onClick={handleGoogleLogin}
-            >
-              <p className="font-light opacity-75">
-                {isGoogleLoading ? "Redirecting..." : "Continue with Google"}
-              </p>
-            </Button>
           </div>
         </form>
+        <div className="mt-6 flex flex-col gap-6">
+          <div className="flex items-center justify-center gap-3">
+            <Separator className="flex-1" />
+            <p className="text-xs font-light opacity-50">OR</p>
+            <Separator className="flex-1" />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={isLoading || isGoogleLoading}
+            onClick={handleGoogleLogin}
+          >
+            <p className="font-light opacity-75">
+              {isGoogleLoading ? "Redirecting..." : "Continue with Google"}
+            </p>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

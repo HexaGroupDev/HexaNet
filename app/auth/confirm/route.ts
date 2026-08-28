@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { getRequestOrigin } from "@/lib/supabase/request-origin";
+import { redirectWithFlash } from "@/lib/alerts/flash";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+  const origin = getRequestOrigin(request);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const code = searchParams.get("code");
@@ -25,10 +28,16 @@ export async function GET(request: NextRequest) {
     });
     if (!error) {
       redirect(next);
-    } else {
-      redirect(`/auth/error?error=${error?.message}`);
     }
+
+    return redirectWithFlash(
+      `${origin}/auth/login`,
+      error.message || "Could not verify your email link.",
+    );
   }
 
-  redirect(`/auth/error?error=No token hash or type`);
+  return redirectWithFlash(
+    `${origin}/auth/login`,
+    "This confirmation link is invalid or has expired.",
+  );
 }

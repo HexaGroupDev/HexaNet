@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { applyFlashAlert } from '@/lib/alerts/flash'
 
 function hasAuthCookie(request: NextRequest) {
   return request.cookies
@@ -12,20 +13,52 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = pathname.startsWith('/auth')
   const isPublicRoute = pathname === '/' || isAuthRoute
   const sessionCookiePresent = hasAuthCookie(request)
+  const hasOAuthCode = request.nextUrl.searchParams.has('code')
+  const hasOAuthError =
+    request.nextUrl.searchParams.has('error_code') ||
+    request.nextUrl.searchParams.has('error')
+
+  // PKCE exchange must own this request. Session refresh here can race the
+  // one-time code and trigger flow_state_already_used.
+  if (
+    pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/auth/confirm')
+  ) {
+    return NextResponse.next({ request })
+  }
 
   // No session cookie: skip Auth network work on public routes, and redirect
   // protected routes without calling getClaims().
   if (!sessionCookiePresent) {
-    if (
-      request.nextUrl.pathname === '/' &&
-      request.nextUrl.searchParams.has('code')
-    ) {
+    if (pathname === '/' && hasOAuthCode) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth/callback'
       if (!url.searchParams.has('next')) {
         url.searchParams.set('next', '/dashboard')
       }
       return NextResponse.redirect(url)
+    }
+
+    if (pathname === '/' && hasOAuthError) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      url.search = ''
+      const response = NextResponse.redirect(url)
+      const description =
+        request.nextUrl.searchParams.get('error_description') ??
+        request.nextUrl.searchParams.get('error')
+      if (description) applyFlashAlert(response, description)
+      return response
+    }
+
+    if (pathname.startsWith('/auth/error')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      url.search = ''
+      const response = NextResponse.redirect(url)
+      const description = request.nextUrl.searchParams.get('error')
+      if (description) applyFlashAlert(response, description)
+      return response
     }
 
     if (isPublicRoute) {
@@ -82,18 +115,6 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse
   }
 
-  if (
-    request.nextUrl.pathname === '/' &&
-    request.nextUrl.searchParams.has('code')
-  ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/callback'
-    if (!url.searchParams.has('next')) {
-      url.searchParams.set('next', '/dashboard')
-    }
-    return redirectWithSession(url)
-  }
-
   if (request.nextUrl.pathname === '/' && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
@@ -113,7 +134,6 @@ export async function updateSession(request: NextRequest) {
   const authPassthrough =
     pathname.startsWith('/auth/callback') ||
     pathname.startsWith('/auth/confirm') ||
-    pathname.startsWith('/auth/error') ||
     pathname.startsWith('/auth/update-password') ||
     pathname.startsWith('/auth/details')
 

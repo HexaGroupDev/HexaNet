@@ -14,19 +14,19 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useScreenAlert } from "@/components/screen-alert";
 
 export default function DetailsPage() {
   const router = useRouter();
   const [birthday, setBirthday] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { show } = useScreenAlert();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
     if (!birthday) {
-      setError("Birthday is required.");
+      show("Birthday is required.");
       return;
     }
 
@@ -88,7 +88,7 @@ export default function DetailsPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      show(err instanceof Error ? err.message : "An error occurred");
       setIsLoading(false);
     }
   }
@@ -115,7 +115,6 @@ export default function DetailsPage() {
                 disabled={isLoading}
               />
             </div>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? <Spinner /> : "Continue to dashboard"}
             </Button>
