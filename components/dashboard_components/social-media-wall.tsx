@@ -1,105 +1,65 @@
-import Link from "next/link";
-import { Share2 } from "lucide-react";
-import { SocialPostCard } from "@/components/dashboard_components/social-post-card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getRecentSocialPosts } from "@/lib/social/posts";
-import type { SocialPost } from "@/lib/social/types";
-import { cn } from "@/lib/utils";
+import { SocialCarousel } from "@/components/dashboard_components/social-carousel";
+import { SOCIAL_PLATFORMS, type SocialSlide } from "@/lib/social/slide";
+import { loadTikTokPosts } from "@/lib/social/load-tiktok";
 
-function PostGrid({
-  posts,
-  columns,
-}: {
-  posts: SocialPost[];
-  columns: 2 | 3;
-}) {
-  return (
-    <div
-      className={cn(
-        "grid gap-3 sm:grid-cols-2",
-        columns === 3 && "lg:grid-cols-3",
-      )}
-    >
-      {posts.map((post) => (
-        <SocialPostCard key={post.id} post={post} />
-      ))}
-    </div>
-  );
-}
-
-function EmptyWall() {
-  return (
-    <Empty className="border">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <Share2 />
-        </EmptyMedia>
-        <EmptyTitle>No posts yet</EmptyTitle>
-        <EmptyDescription>
-          Latest Instagram, TikTok, and LinkedIn posts will show up here after
-          the first sync.
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
-  );
+function placeholderSlide(
+  platform: SocialSlide["platform"],
+  label: string,
+): SocialSlide {
+  return {
+    platform,
+    label,
+    postUrl: null,
+    caption: null,
+    thumbnailUrl: null,
+    videoUrl: null,
+    authorName: null,
+    handle: null,
+    publishedAt: null,
+  };
 }
 
 export function SocialMediaWallSkeleton() {
   return (
     <section className="flex flex-col gap-3" aria-busy="true">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-5 w-28" />
-        <Skeleton className="h-4 w-16" />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-52 rounded-xl" />
-        ))}
+      <Skeleton className="h-5 w-28" />
+      <div className="flex flex-col gap-2">
+        <Skeleton className="mx-auto h-[24rem] aspect-[9/16] rounded-xl" />
+        <div className="flex justify-center gap-1.5">
+          <Skeleton className="h-1.5 w-4 rounded-full" />
+          <Skeleton className="size-1.5 rounded-full" />
+          <Skeleton className="size-1.5 rounded-full" />
+        </div>
       </div>
     </section>
   );
 }
 
-export async function SocialMediaWall({
-  limit = 8,
-  showViewAll = true,
-  showHeading = true,
-  columns = 2,
-}: {
-  limit?: number;
-  showViewAll?: boolean;
-  showHeading?: boolean;
-  columns?: 2 | 3;
-}) {
-  const posts = await getRecentSocialPosts(limit);
+export async function SocialMediaWall() {
+  const tiktok = (await loadTikTokPosts())[0] ?? null;
+
+  const slides: SocialSlide[] = SOCIAL_PLATFORMS.map(({ platform, label }) => {
+    if (platform === "tiktok" && tiktok) {
+      return {
+        platform,
+        label,
+        postUrl: tiktok.postUrl,
+        caption: tiktok.caption,
+        thumbnailUrl: tiktok.thumbnailUrl,
+        videoUrl: tiktok.videoUrl,
+        authorName: tiktok.authorName,
+        handle: tiktok.handle,
+        publishedAt: tiktok.publishedAt,
+      };
+    }
+    return placeholderSlide(platform, label);
+  });
 
   return (
     <section className="flex flex-col gap-3">
-      {showHeading ? (
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-heading text-base font-medium">Social Media</h2>
-          {showViewAll ? (
-            <Link
-              href="/dashboard/social"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              View all
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
-      {posts.length === 0 ? (
-        <EmptyWall />
-      ) : (
-        <PostGrid posts={posts} columns={columns} />
-      )}
+      <h2 className="font-heading text-base font-medium">Social</h2>
+      <SocialCarousel slides={slides} />
     </section>
   );
 }

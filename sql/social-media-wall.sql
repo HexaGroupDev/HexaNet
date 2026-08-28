@@ -1,9 +1,45 @@
--- Run in the Supabase SQL editor.
--- Company social wall: cached posts the dashboard reads, plus account
--- credentials the cron job uses. Tokens never leave the service role.
+-- Run in the Supabase SQL editor. Keeps existing tables (IF NOT EXISTS).
+-- TikTok wall: public profile URL → scrape latest post → cache 12h → embed.
+-- If social_embed_urls already exists, you only need sql/tiktok-cache-tables.sql.
 
 -- ---------------------------------------------------------------------------
--- Cached posts (dashboard reads these; cron writes them)
+-- Public profile (or post) URLs to scrape
+-- ---------------------------------------------------------------------------
+create table if not exists public.social_embed_urls (
+  id bigint generated always as identity primary key,
+  url text not null,
+  enabled boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'social_embed_urls_url_key'
+      and conrelid = 'public.social_embed_urls'::regclass
+  ) then
+    alter table public.social_embed_urls
+      add constraint social_embed_urls_url_key unique (url);
+  end if;
+end $$;
+
+alter table public.social_embed_urls enable row level security;
+
+revoke all on table public.social_embed_urls from anon, authenticated, public;
+grant select on table public.social_embed_urls to authenticated;
+grant select, insert, update, delete on table public.social_embed_urls to service_role;
+
+drop policy if exists "authenticated can read social embed urls" on public.social_embed_urls;
+create policy "authenticated can read social embed urls"
+  on public.social_embed_urls
+  for select
+  to authenticated
+  using (true);
+
+-- ---------------------------------------------------------------------------
+-- Cached latest posts
 -- ---------------------------------------------------------------------------
 create table if not exists public.social_posts (
   id bigint generated always as identity primary key,
@@ -71,7 +107,24 @@ create policy "authenticated can read social posts"
   using (true);
 
 -- ---------------------------------------------------------------------------
--- Connected company accounts (cron / service role only)
+-- Refresh stamp
+-- ---------------------------------------------------------------------------
+create table if not exists public.social_sync_state (
+  id text primary key,
+  last_updated timestamptz not null default timestamptz '1970-01-01+00'
+);
+
+insert into public.social_sync_state (id, last_updated)
+values ('tiktok', timestamptz '1970-01-01+00')
+on conflict (id) do nothing;
+
+alter table public.social_sync_state enable row level security;
+
+revoke all on table public.social_sync_state from anon, authenticated, public;
+grant select, insert, update, delete on table public.social_sync_state to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Kept for later platforms (unused by TikTok scrape)
 -- ---------------------------------------------------------------------------
 create table if not exists public.social_accounts (
   id bigint generated always as identity primary key,
@@ -111,3 +164,8 @@ alter table public.social_accounts enable row level security;
 
 revoke all on table public.social_accounts from anon, authenticated, public;
 grant select, insert, update, delete on table public.social_accounts to service_role;
+
+-- Example:
+-- insert into public.social_embed_urls (url, sort_order)
+-- values ('https://www.tiktok.com/@YOUR_HANDLE', 1)
+-- on conflict (url) do nothing;
