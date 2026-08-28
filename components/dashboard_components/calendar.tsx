@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 
 const UPCOMING_EVENTS = [
@@ -161,6 +162,53 @@ function WishBirthdayButton({
   );
 }
 
+function CalendarEventRowSkeleton() {
+  return (
+    <div className="flex items-start gap-3">
+      <Skeleton className="size-10 shrink-0 rounded-lg" />
+      <div className="min-w-0 flex-1 border-l-2 border-muted py-0.5 pl-3">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-1.5 h-3 w-16" />
+      </div>
+    </div>
+  );
+}
+
+function CalendarBirthdayRowSkeleton() {
+  return (
+    <div className="flex items-center gap-3">
+      <Skeleton className="size-8 shrink-0 rounded-full" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+    </div>
+  );
+}
+
+export function CalendarSkeleton() {
+  return (
+    <Card className="border" size="sm" aria-busy="true">
+      <CardHeader className="flex items-center justify-between">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="size-7 rounded-lg" />
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <CalendarEventRowSkeleton />
+      </CardContent>
+      <Separator />
+      <CardHeader>
+        <Skeleton className="h-5 w-40" />
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <CalendarBirthdayRowSkeleton />
+        <CalendarBirthdayRowSkeleton />
+        <CalendarBirthdayRowSkeleton />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function Calendar() {
   const [people, setPeople] = useState<ProfileBirthday[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -275,7 +323,11 @@ export function Calendar() {
             Could not load birthdays. {error}
           </p>
         ) : loading ? (
-          <p className="text-muted-foreground">Loading birthdays…</p>
+          <div className="flex flex-col gap-3">
+            <CalendarBirthdayRowSkeleton />
+            <CalendarBirthdayRowSkeleton />
+            <CalendarBirthdayRowSkeleton />
+          </div>
         ) : upcoming.length === 0 ? (
           <p className="text-muted-foreground">None this week.</p>
         ) : (

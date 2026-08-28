@@ -23,9 +23,13 @@ function placeholderSlide(
 export function SocialMediaWallSkeleton() {
   return (
     <section className="flex flex-col gap-3" aria-busy="true">
-      <Skeleton className="h-5 w-28" />
+      <Skeleton className="h-5 w-16" />
       <div className="flex flex-col gap-2">
-        <Skeleton className="mx-auto h-[24rem] aspect-[9/16] rounded-xl" />
+        <div className="flex items-center justify-center gap-2">
+          <Skeleton className="hidden aspect-[9/16] h-[19.7rem] rounded-xl opacity-70 sm:block" />
+          <Skeleton className="aspect-[9/16] h-[24rem] rounded-xl" />
+          <Skeleton className="hidden aspect-[9/16] h-[19.7rem] rounded-xl opacity-70 sm:block" />
+        </div>
         <div className="flex justify-center gap-1.5">
           <Skeleton className="h-1.5 w-4 rounded-full" />
           <Skeleton className="size-1.5 rounded-full" />

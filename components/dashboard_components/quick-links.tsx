@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Ellipsis, ImageIcon, PenLine, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -154,6 +155,17 @@ function QuickLinkItem({
   );
 }
 
+export function QuickLinksSkeleton() {
+  return (
+    <div className="flex items-center gap-1" aria-busy="true">
+      {Array.from({ length: 5 }, (_, index) => (
+        <Skeleton key={index} className="size-10 rounded-md" />
+      ))}
+      <Skeleton className="size-10 rounded-md bg-muted/50" />
+    </div>
+  );
+}
+
 export function QuickLinks() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -260,14 +272,20 @@ export function QuickLinks() {
         className="no-scrollbar overflow-x-auto"
       >
         <div className="flex w-max flex-nowrap items-center gap-1">
-        {links.map((link) => (
-          <QuickLinkItem
-            key={link.id}
-            link={link}
-            onEdit={() => handleEdit(link)}
-            onDelete={() => handleDelete(link.id)}
-          />
-        ))}
+        {hydrated ? (
+          links.map((link) => (
+            <QuickLinkItem
+              key={link.id}
+              link={link}
+              onEdit={() => handleEdit(link)}
+              onDelete={() => handleDelete(link.id)}
+            />
+          ))
+        ) : (
+          Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="size-10 rounded-md" />
+          ))
+        )}
         <AlertDialog open={open} onOpenChange={handleOpenChange}>
           <AlertDialogTrigger
             render={

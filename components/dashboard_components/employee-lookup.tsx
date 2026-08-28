@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/pagination";
 import { createClient } from "@/lib/supabase/client";
 import { profilePath } from "@/lib/profiles/profile-path";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const PAGE_SIZE = 7;
 
@@ -69,6 +70,31 @@ function pageItems(current: number, total: number) {
   if (end < total - 1) items.push("ellipsis");
   items.push(total);
   return items;
+}
+
+function EmployeeRowSkeleton() {
+  return (
+    <div className="flex items-center gap-3 rounded-lg px-1 py-2">
+      <Skeleton className="size-8 shrink-0 rounded-full" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+    </div>
+  );
+}
+
+export function EmployeeLookupSkeleton() {
+  return (
+    <div className="flex flex-col gap-3" aria-busy="true">
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <div className="flex flex-col">
+        {Array.from({ length: PAGE_SIZE }, (_, index) => (
+          <EmployeeRowSkeleton key={index} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function EmployeeLookup() {
@@ -175,9 +201,9 @@ export function EmployeeLookup() {
       </InputGroup>
       <div className="flex flex-col">
         {loading ? (
-          <p className="px-1 py-3 text-sm text-muted-foreground">
-            Loading employees…
-          </p>
+          Array.from({ length: PAGE_SIZE }, (_, index) => (
+            <EmployeeRowSkeleton key={index} />
+          ))
         ) : people.length === 0 ? (
           <p className="px-1 py-3 text-sm text-muted-foreground">
             {employees.length === 0
