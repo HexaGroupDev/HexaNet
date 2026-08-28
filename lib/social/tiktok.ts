@@ -28,7 +28,7 @@ export function parseTikTokVideoUrl(value: string) {
 
 export function publishedAtFromVideoId(videoId: string) {
   try {
-    const seconds = Number(BigInt(videoId) >> 32n);
+    const seconds = Number(BigInt(videoId) >> BigInt(32));
     if (!Number.isFinite(seconds) || seconds < 1_000_000_000) return null;
     return new Date(seconds * 1000).toISOString();
   } catch {
