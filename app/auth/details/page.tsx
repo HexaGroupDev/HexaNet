@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  combineName,
+  defaultNameFromUser,
+  splitName,
+} from "@/lib/auth/profile-name";
+import { profilePath } from "@/lib/profiles/profile-path";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,17 +19,79 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useScreenAlert } from "@/components/screen-alert";
 
 export default function DetailsPage() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [teamRole, setTeamRole] = useState("");
+  const [pronouns, setPronouns] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { show } = useScreenAlert();
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDefaults() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+
+      if (!user) {
+        setIsBootstrapping(false);
+        return;
+      }
+
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("username, team_role, pronouns, birthday")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      const nameSource =
+        (typeof existing?.username === "string" && existing.username.trim()) ||
+        defaultNameFromUser(user);
+      const { firstName: nextFirstName, lastName: nextLastName } =
+        splitName(nameSource);
+
+      setFirstName(nextFirstName);
+      setLastName(nextLastName);
+      setTeamRole(
+        typeof existing?.team_role === "string" ? existing.team_role : "",
+      );
+      setPronouns(
+        typeof existing?.pronouns === "string" ? existing.pronouns : "",
+      );
+      setBirthday(
+        typeof existing?.birthday === "string" ? existing.birthday : "",
+      );
+      setIsBootstrapping(false);
+    }
+
+    void loadDefaults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    const username = combineName(firstName, lastName);
+    if (!username) {
+      show("Name is required.");
+      return;
+    }
 
     if (!birthday) {
       show("Birthday is required.");
@@ -44,15 +112,18 @@ export default function DetailsPage() {
       }
 
       const metadata = user.user_metadata ?? {};
-      const username =
-        (typeof metadata.full_name === "string" && metadata.full_name.trim()) ||
-        (typeof metadata.name === "string" && metadata.name.trim()) ||
-        user.email?.split("@")[0] ||
-        null;
       const avatarUrl =
         typeof metadata.avatar_url === "string" && metadata.avatar_url.trim()
           ? metadata.avatar_url
           : null;
+
+      const profilePayload = {
+        birthday,
+        username,
+        team_role: teamRole.trim() || null,
+        pronouns: pronouns.trim() || null,
+        email: user.email ?? null,
+      };
 
       const { data: existing, error: existingError } = await supabase
         .from("profiles")
@@ -67,17 +138,12 @@ export default function DetailsPage() {
       const { error: profileError } = existing
         ? await supabase
             .from("profiles")
-            .update({
-              birthday,
-              email: user.email ?? null,
-            })
+            .update(profilePayload)
             .eq("id", user.id)
         : await supabase.from("profiles").insert({
             id: user.id,
-            birthday,
-            username,
+            ...profilePayload,
             avatar_url: avatarUrl,
-            email: user.email ?? null,
             permissions: "viewer",
           });
 
@@ -85,7 +151,7 @@ export default function DetailsPage() {
         throw new Error(profileError.message);
       }
 
-      router.push("/dashboard");
+      router.push(profilePath(username));
       router.refresh();
     } catch (err: unknown) {
       show(err instanceof Error ? err.message : "An error occurred");
@@ -102,24 +168,73 @@ export default function DetailsPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}>
-          <div className="flex flex-col gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="birthday">Birthday</Label>
-              <Input
-                id="birthday"
-                type="date"
-                required
-                value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Spinner /> : "Continue to dashboard"}
-            </Button>
+        {isBootstrapping ? (
+          <div className="flex justify-center py-10">
+            <Spinner />
           </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="first-name">First name</Label>
+                  <Input
+                    id="first-name"
+                    autoComplete="given-name"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="last-name">Last name</Label>
+                  <Input
+                    id="last-name"
+                    autoComplete="family-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="team-role">Team role</Label>
+                <Input
+                  id="team-role"
+                  placeholder="e.g. Copywriter, Dev"
+                  value={teamRole}
+                  onChange={(e) => setTeamRole(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="pronouns">Pronouns</Label>
+                <Input
+                  id="pronouns"
+                  placeholder="e.g. she/her, they/them"
+                  value={pronouns}
+                  onChange={(e) => setPronouns(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="birthday">Birthday</Label>
+                <Input
+                  id="birthday"
+                  type="date"
+                  required
+                  value={birthday}
+                  onChange={(e) => setBirthday(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? <Spinner /> : "Continue to dashboard"}
+              </Button>
+            </div>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

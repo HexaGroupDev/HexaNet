@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ImageIcon, Mail, Phone, PlusCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { AddContactLinkDialog } from "@/components/profile_components/add-contact-link";
 import { AddSocialLinkDialog } from "@/components/profile_components/add-social-link";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -51,7 +52,8 @@ export function ProfileLinks({
   const [links, setLinks] = useState(initialLinks);
   const [phone, setPhone] = useState(initialPhone ?? "");
   const [savedPhone, setSavedPhone] = useState(initialPhone ?? "");
-  const [open, setOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const linksRef = useRef(initialLinks);
   const phoneRef = useRef(initialPhone ?? "");
@@ -105,6 +107,32 @@ export function ProfileLinks({
     setSavedPhone(trimmed);
   }
 
+  async function handleRemovePhone() {
+    const previous = phoneRef.current;
+    phoneRef.current = "";
+    setPhone("");
+    setSavedPhone("");
+    setSyncError(null);
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ phone: null })
+      .eq("id", profileId)
+      .select("id")
+      .maybeSingle();
+
+    if (error || !data) {
+      phoneRef.current = previous;
+      setPhone(previous);
+      setSavedPhone(previous);
+      setSyncError(
+        error?.message ??
+          "Could not remove phone number. You may not have permission.",
+      );
+    }
+  }
+
   async function persistLinks(next: ProfileLink[], previous: ProfileLink[]) {
     linksRef.current = next;
     setLinks(next);
@@ -143,8 +171,8 @@ export function ProfileLinks({
 
   return (
     <div className="flex flex-col gap-1">
-      {email || savedPhone ? (
-        <div className="flex text-sm gap-2">
+      {email || savedPhone || canEdit ? (
+        <div className="flex items-center gap-2 text-sm">
           {email ? (
             <a href={`mailto:${email}`} className="flex items-center gap-1">
               <Mail size={14} /> {email}
@@ -158,6 +186,16 @@ export function ProfileLinks({
               <Phone size={14} />
               {savedPhone}
             </a>
+          ) : null}
+          {canEdit ? (
+            <button
+              type="button"
+              aria-label="Add contact links"
+              className="flex items-center gap-1.5 opacity-50 hover:cursor-pointer hover:opacity-100"
+              onClick={() => setContactOpen(true)}
+            >
+              <PlusCircle size={15} />
+            </button>
           ) : null}
         </div>
       ) : null}
@@ -182,12 +220,12 @@ export function ProfileLinks({
         {canEdit ? (
           <button
             type="button"
-            aria-label="Add a social link"
+            aria-label="Add social links"
             className="flex items-center gap-1.5 opacity-50 hover:cursor-pointer hover:opacity-100"
-            onClick={() => setOpen(true)}
+            onClick={() => setSocialOpen(true)}
           >
             <PlusCircle size={15} />
-            {links.length === 0 ? <span>Add a social link</span> : null}
+            {links.length === 0 ? <span>Add social links</span> : null}
           </button>
         ) : null}
       </div>
@@ -195,16 +233,23 @@ export function ProfileLinks({
         <p className="text-sm text-destructive">{syncError}</p>
       ) : null}
       {canEdit ? (
-        <AddSocialLinkDialog
-          open={open}
-          onOpenChange={setOpen}
-          links={links}
-          phone={phone}
-          onPhoneChange={setPhone}
-          onPhoneCommit={(value) => void persistPhone(value)}
-          onSubmit={handleAdd}
-          onRemove={handleRemove}
-        />
+        <>
+          <AddContactLinkDialog
+            open={contactOpen}
+            onOpenChange={setContactOpen}
+            phone={phone}
+            onPhoneChange={setPhone}
+            onPhoneCommit={(value) => void persistPhone(value)}
+            onRemove={handleRemovePhone}
+          />
+          <AddSocialLinkDialog
+            open={socialOpen}
+            onOpenChange={setSocialOpen}
+            links={links}
+            onSubmit={handleAdd}
+            onRemove={handleRemove}
+          />
+        </>
       ) : null}
     </div>
   );

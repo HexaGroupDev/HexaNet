@@ -76,18 +76,12 @@ export function AddSocialLinkDialog({
   open,
   onOpenChange,
   links,
-  phone,
-  onPhoneChange,
-  onPhoneCommit,
   onSubmit,
   onRemove,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   links: ProfileLink[];
-  phone: string;
-  onPhoneChange: (value: string) => void;
-  onPhoneCommit: (value: string) => void;
   onSubmit: (link: ProfileLink) => void | Promise<void>;
   onRemove: (index: number) => void | Promise<void>;
 }) {
@@ -121,8 +115,6 @@ export function AddSocialLinkDialog({
       return;
     }
 
-    onPhoneCommit(phone);
-
     onOpenChange(false);
     void onSubmit({
       link: trimmedUrl,
@@ -131,29 +123,12 @@ export function AddSocialLinkDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onPhoneCommit(phone);
-        onOpenChange(nextOpen);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a social link</DialogTitle>
+          <DialogTitle>Add social links</DialogTitle>
         </DialogHeader>
         <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="profile-phone">Phone number</FieldLabel>
-            <Input
-              id="profile-phone"
-              type="tel"
-              placeholder="Add a phone number"
-              value={phone}
-              onChange={(event) => onPhoneChange(event.target.value)}
-              onBlur={() => onPhoneCommit(phone)}
-            />
-          </Field>
           {links.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {links.map((item, index) => {

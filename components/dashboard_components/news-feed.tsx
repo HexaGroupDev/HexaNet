@@ -1,4 +1,12 @@
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function NewsFeedSkeleton() {
@@ -21,5 +29,7 @@ export function NewsFeedSkeleton() {
 }
 
 export function NewsFeed() {
-  return <Card className="flex gap-1 border">News Feed</Card>;
+  return <Card className="flex gap-1 border">
+    
+  </Card>;
 }

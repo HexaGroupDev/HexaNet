@@ -27,7 +27,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import {
   InputGroup,
   InputGroupAddon,
@@ -39,7 +38,6 @@ const STORAGE_KEY = "hexanet.quick-links";
 
 type QuickLink = {
   id: string;
-  title: string;
   url: string;
 };
 
@@ -51,23 +49,24 @@ function toHref(url: string) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
-function faviconUrl(url: string) {
+function hostname(url: string) {
   try {
-    const { hostname } = new URL(toHref(url));
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
+    return new URL(toHref(url)).hostname;
   } catch {
-    return null;
+    return url;
   }
+}
+
+function faviconUrl(url: string) {
+  const domain = hostname(url);
+  if (!domain) return null;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
 }
 
 function isQuickLink(value: unknown): value is QuickLink {
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
-  return (
-    typeof item.id === "string" &&
-    typeof item.title === "string" &&
-    typeof item.url === "string"
-  );
+  return typeof item.id === "string" && typeof item.url === "string";
 }
 
 function readStoredLinks(): QuickLink[] {
@@ -76,13 +75,13 @@ function readStoredLinks(): QuickLink[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isQuickLink);
+    return parsed.filter(isQuickLink).map(({ id, url }) => ({ id, url }));
   } catch {
     return [];
   }
 }
 
-function LinkFavicon({ url, title }: { url: string; title: string }) {
+function LinkFavicon({ url }: { url: string }) {
   const src = faviconUrl(url);
   const [failed, setFailed] = useState(!src);
 
@@ -95,7 +94,6 @@ function LinkFavicon({ url, title }: { url: string; title: string }) {
     <img
       src={src}
       alt=""
-      title={title}
       width={32}
       height={32}
       className="size-8"
@@ -114,18 +112,19 @@ function QuickLinkItem({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const label = hostname(link.url);
   return (
     <div className="group relative size-10 shrink-0 rounded-md transition-all duration-200 hover:bg-primary/10 hover:text-primary has-[[aria-expanded=true]]:bg-primary/10">
       <a
         href={toHref(link.url)}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={link.title}
-        title={link.title}
+        aria-label={label}
+        title={label}
         className="flex size-10 items-center justify-center rounded-md"
       >
         <div className="flex size-10 items-center justify-center overflow-hidden rounded-md bg-muted">
-          <LinkFavicon url={link.url} title={link.title} />
+          <LinkFavicon url={link.url} />
         </div>
       </a>
       <DropdownMenu>
@@ -133,7 +132,7 @@ function QuickLinkItem({
           render={
             <button
               type="button"
-              aria-label={`Actions for ${link.title}`}
+              aria-label={`Actions for ${label}`}
               className="absolute top-0 right-0 z-10 flex size-5 items-center justify-center rounded-sm text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:cursor-pointer hover:bg-background hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 group-hover:pointer-events-auto group-hover:opacity-100 aria-expanded:pointer-events-auto aria-expanded:opacity-100"
             >
               <Ellipsis className="size-3.5" />
@@ -169,7 +168,6 @@ export function QuickLinksSkeleton() {
 export function QuickLinks() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [links, setLinks] = useState<QuickLink[]>([]);
@@ -213,7 +211,6 @@ export function QuickLinks() {
   }, [links, updateOverflow]);
 
   function resetForm() {
-    setTitle("");
     setUrl("");
     setError(null);
     setEditingId(null);
@@ -226,7 +223,6 @@ export function QuickLinks() {
 
   function handleEdit(link: QuickLink) {
     setEditingId(link.id);
-    setTitle(link.title);
     setUrl(link.url);
     setError(null);
     setOpen(true);
@@ -237,13 +233,8 @@ export function QuickLinks() {
   }
 
   function handleSave() {
-    const trimmedTitle = title.trim();
     const trimmedUrl = stripProtocol(url);
 
-    if (!trimmedTitle) {
-      setError("Enter a title for the link.");
-      return;
-    }
     if (!trimmedUrl) {
       setError("Enter a website URL.");
       return;
@@ -252,15 +243,10 @@ export function QuickLinks() {
     setLinks((prev) => {
       if (editingId) {
         return prev.map((link) =>
-          link.id === editingId
-            ? { ...link, title: trimmedTitle, url: trimmedUrl }
-            : link,
+          link.id === editingId ? { id: link.id, url: trimmedUrl } : link,
         );
       }
-      return [
-        ...prev,
-        { id: crypto.randomUUID(), title: trimmedTitle, url: trimmedUrl },
-      ];
+      return [...prev, { id: crypto.randomUUID(), url: trimmedUrl }];
     });
     handleOpenChange(false);
   }
@@ -309,15 +295,6 @@ export function QuickLinks() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="quick-link-title">Title</FieldLabel>
-                <Input
-                  id="quick-link-title"
-                  placeholder="Intranet"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </Field>
               <Field>
                 <FieldLabel htmlFor="quick-link-url">Website URL</FieldLabel>
                 <InputGroup>

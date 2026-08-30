@@ -1,4 +1,5 @@
 import { AuthButton } from "@/components/auth-button";
+import { LogoWallBackground } from "@/components/logo-wall-background";
 import { NavLinks } from "@/components/nav-links";
 import SearchBar from "@/components/search-bar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +14,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <section suppressHydrationWarning className="min-h-screen flex flex-col items-center">
+    <section
+      suppressHydrationWarning
+      className="relative isolate min-h-screen flex flex-col items-center bg-background"
+    >
+      <LogoWallBackground />
       <nav className="w-full fixed flex justify-center z-10 border-b bg-background border-b-foreground/10 h-16 mb-10">
         <div className="w-full max-w-7xl flex justify-between items-center p-3 px-5 text-sm">
           <Link href="/dashboard" className="flex gap-1 items-center">
@@ -43,7 +48,7 @@ export default function DashboardLayout({
           </div>
         </div>
       </nav>
-      <div className="flex-1 mt-[100px] flex flex-col gap-20 w-full md:px-20 max-w-7xl p-5 px-4">
+      <div className="relative z-[1] flex-1 mt-[100px] flex flex-col gap-20 w-full md:px-20 max-w-7xl p-5 px-4">
         {children}
       </div>
     </section>

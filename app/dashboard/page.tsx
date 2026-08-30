@@ -20,21 +20,32 @@ export default function Dashboard() {
       </Suspense>
       <div
         className="
-        grid grid-cols-1 md:gap-4
+        grid grid-cols-1 gap-3
+        md:gap-4
         md:grid-cols-[minmax(0,1fr)_260px]
         lg:grid-cols-[minmax(0,1fr)_400px]
         "
       >
-        <div className="flex flex-col gap-3">
-          <QuickLinks />
-          <NewsFeed />
-          <Suspense fallback={<SocialMediaWallSkeleton />}>
-            <SocialMediaWall />
-          </Suspense>
+        <div className="contents md:flex md:min-w-0 md:flex-col md:gap-3">
+          <div className="order-1 min-w-0">
+            <QuickLinks />
+          </div>
+          <div className="order-3 min-w-0">
+            <NewsFeed />
+          </div>
+          <div className="order-4 min-w-0">
+            <Suspense fallback={<SocialMediaWallSkeleton />}>
+              <SocialMediaWall />
+            </Suspense>
+          </div>
         </div>
-        <div className="flex flex-col gap-3">
-          <Calendar />
-          <EmployeeLookup />
+        <div className="contents md:flex md:flex-col md:gap-3">
+          <div className="order-2 min-w-0">
+            <Calendar />
+          </div>
+          <div className="order-5 min-w-0">
+            <EmployeeLookup />
+          </div>
         </div>
       </div>
     </main>
