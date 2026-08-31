@@ -7,7 +7,7 @@ export function LogoWallBackground() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     >
       <div className="logo-wall-scene">
         <div className="logo-wall-plane">

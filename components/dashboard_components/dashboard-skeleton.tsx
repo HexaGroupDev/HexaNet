@@ -18,9 +18,6 @@ export function DashboardSkeleton() {
         "
       >
         <div className="contents md:flex md:min-w-0 md:flex-col md:gap-3">
-          <div className="order-1 min-w-0">
-            <QuickLinksSkeleton />
-          </div>
           <div className="order-3 min-w-0">
             <NewsFeedSkeleton />
           </div>
@@ -29,8 +26,11 @@ export function DashboardSkeleton() {
           </div>
         </div>
         <div className="contents md:flex md:flex-col md:gap-3">
-          <div className="order-2 min-w-0">
+          <div className="order-1 min-w-0">
             <CalendarSkeleton />
+          </div>
+          <div className="order-2 min-w-0">
+            <QuickLinksSkeleton />
           </div>
           <div className="order-5 min-w-0">
             <EmployeeLookupSkeleton />

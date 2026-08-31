@@ -5,7 +5,10 @@ import {
   Greeting,
   GreetingSkeleton,
 } from "@/components/dashboard_components/greeting";
-import { NewsFeed } from "@/components/dashboard_components/news-feed";
+import {
+  NewsFeed,
+  NewsFeedSkeleton,
+} from "@/components/dashboard_components/news-feed";
 import { QuickLinks } from "@/components/dashboard_components/quick-links";
 import {
   SocialMediaWall,
@@ -27,11 +30,10 @@ export default function Dashboard() {
         "
       >
         <div className="contents md:flex md:min-w-0 md:flex-col md:gap-3">
-          <div className="order-1 min-w-0">
-            <QuickLinks />
-          </div>
           <div className="order-3 min-w-0">
-            <NewsFeed />
+            <Suspense fallback={<NewsFeedSkeleton />}>
+              <NewsFeed />
+            </Suspense>
           </div>
           <div className="order-4 min-w-0">
             <Suspense fallback={<SocialMediaWallSkeleton />}>
@@ -40,8 +42,11 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="contents md:flex md:flex-col md:gap-3">
-          <div className="order-2 min-w-0">
+          <div className="order-1 min-w-0">
             <Calendar />
+          </div>
+          <div className="order-2 min-w-0">
+            <QuickLinks />
           </div>
           <div className="order-5 min-w-0">
             <EmployeeLookup />

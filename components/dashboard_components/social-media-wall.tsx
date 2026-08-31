@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SocialCarousel } from "@/components/dashboard_components/social-carousel";
+import { loadInstagramPosts } from "@/lib/social/load-instagram";
 import { SOCIAL_PLATFORMS, type SocialSlide } from "@/lib/social/slide";
 import { loadTikTokPosts } from "@/lib/social/load-tiktok";
 
@@ -41,9 +42,27 @@ export function SocialMediaWallSkeleton() {
 }
 
 export async function SocialMediaWall() {
-  const tiktok = (await loadTikTokPosts())[0] ?? null;
+  const [tiktokPosts, instagramPosts] = await Promise.all([
+    loadTikTokPosts(),
+    loadInstagramPosts(),
+  ]);
+  const tiktok = tiktokPosts[0] ?? null;
+  const instagram = instagramPosts[0] ?? null;
 
   const slides: SocialSlide[] = SOCIAL_PLATFORMS.map(({ platform, label }) => {
+    if (platform === "instagram" && instagram) {
+      return {
+        platform,
+        label,
+        postUrl: instagram.postUrl,
+        caption: instagram.caption,
+        thumbnailUrl: instagram.thumbnailUrl,
+        videoUrl: instagram.videoUrl,
+        authorName: instagram.authorName,
+        handle: instagram.handle,
+        publishedAt: instagram.publishedAt,
+      };
+    }
     if (platform === "tiktok" && tiktok) {
       return {
         platform,

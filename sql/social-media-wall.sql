@@ -118,6 +118,10 @@ insert into public.social_sync_state (id, last_updated)
 values ('tiktok', timestamptz '1970-01-01+00')
 on conflict (id) do nothing;
 
+insert into public.social_sync_state (id, last_updated)
+values ('instagram', timestamptz '1970-01-01+00')
+on conflict (id) do nothing;
+
 alter table public.social_sync_state enable row level security;
 
 revoke all on table public.social_sync_state from anon, authenticated, public;

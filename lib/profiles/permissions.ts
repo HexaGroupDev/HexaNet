@@ -10,3 +10,7 @@ export function parseAppPermission(value: unknown): AppPermission | null {
 export function canEdit(permission: AppPermission | null | undefined) {
   return permission === "editor" || permission === "admin";
 }
+
+export function canAdmin(permission: AppPermission | null | undefined) {
+  return permission === "admin";
+}
