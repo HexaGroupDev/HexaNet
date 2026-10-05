@@ -1,5 +1,4 @@
 import {
-  parseInstagramPostUrl,
   toPost,
   type InstagramPost,
 } from "@/lib/social/instagram";
@@ -7,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const GRAPH_VERSION = "v21.0";
 const GRAPH_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
+const DEFAULT_HANDLE = "hexagroupdigital";
 /** Refresh when the token expires within this window. */
 const REFRESH_WITHIN_MS = 10 * 24 * 60 * 60 * 1000;
 
@@ -16,13 +16,22 @@ export type InstagramGraphAccount = {
   accountName: string;
   accessToken: string;
   tokenExpiresAt: string | null;
+  credentialSource: "social_accounts" | "env";
+};
+
+const DEFAULT_ACCOUNT_ID = "17841408485169324";
+const LONG_LIVED_FALLBACK_SECONDS = 60 * 24 * 60 * 60;
+
+type GraphAuthError = {
+  message?: string;
+  type?: string;
+  code?: number;
 };
 
 type GraphMediaItem = {
   id?: string;
   caption?: string;
   media_type?: string;
-  media_product_type?: string;
   media_url?: string;
   thumbnail_url?: string;
   permalink?: string;
@@ -32,11 +41,38 @@ type GraphMediaItem = {
 type RefreshResponse = {
   access_token?: string;
   expires_in?: number;
-  error?: { message?: string };
+  error?: GraphAuthError;
 };
 
 function asString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function configuredAccountId() {
+  return process.env.INSTAGRAM_ACCOUNT_ID?.trim() || DEFAULT_ACCOUNT_ID;
+}
+
+function isReauthorizationError(error?: GraphAuthError | null) {
+  return error?.code === 190;
+}
+
+function logInstagramAuthFailure(
+  context: string,
+  error?: GraphAuthError | null,
+  status?: number,
+) {
+  if (isReauthorizationError(error)) {
+    console.error(
+      "Instagram reauthorization required:",
+      error?.message ?? "access revoked or token expired",
+    );
+    return;
+  }
+  console.error(context, error?.message ?? (status != null ? `HTTP ${status}` : "unknown error"));
+}
+
+function expiresAtFromSeconds(expiresIn: number) {
+  return new Date(Date.now() + expiresIn * 1000).toISOString();
 }
 
 function tryAdminClient() {
@@ -51,47 +87,17 @@ function accountFromEnv(): InstagramGraphAccount | null {
   const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN?.trim();
   if (!accessToken) return null;
 
-  const accountId = process.env.INSTAGRAM_USER_ID?.trim() || "me";
-  const accountName =
-    process.env.INSTAGRAM_USERNAME?.trim() ??
-    process.env.NEXT_PUBLIC_INSTAGRAM_USERNAME?.trim() ??
-    "instagram";
-
-  const expiresAt = process.env.INSTAGRAM_TOKEN_EXPIRES_AT?.trim() || null;
-
   return {
     rowId: null,
-    accountId,
-    accountName,
+    accountId: configuredAccountId(),
+    accountName: process.env.INSTAGRAM_USERNAME?.trim() || DEFAULT_HANDLE,
     accessToken,
-    tokenExpiresAt: expiresAt,
+    tokenExpiresAt: process.env.INSTAGRAM_TOKEN_EXPIRES_AT?.trim() || null,
+    credentialSource: "env",
   };
 }
 
-export async function loadInstagramGraphAccount(): Promise<InstagramGraphAccount | null> {
-  const fromEnv = accountFromEnv();
-  if (fromEnv) return fromEnv;
-
-  const admin = tryAdminClient();
-  if (!admin) return null;
-
-  const { data, error } = await admin
-    .from("social_accounts")
-    .select(
-      "id, account_id, account_name, access_token, token_expires_at",
-    )
-    .eq("platform", "instagram")
-    .eq("enabled", true)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Failed to load Instagram account:", error.message);
-    return null;
-  }
-
-  if (!data) return null;
-
-  const row = data as Record<string, unknown>;
+function rowToAccount(row: Record<string, unknown>): InstagramGraphAccount | null {
   const accessToken = asString(row.access_token);
   const accountId = asString(row.account_id);
   if (!accessToken || !accountId) return null;
@@ -99,46 +105,126 @@ export async function loadInstagramGraphAccount(): Promise<InstagramGraphAccount
   return {
     rowId: typeof row.id === "number" ? row.id : null,
     accountId,
-    accountName: asString(row.account_name) ?? "instagram",
+    accountName: asString(row.account_name) ?? DEFAULT_HANDLE,
     accessToken,
     tokenExpiresAt: asString(row.token_expires_at),
+    credentialSource: "social_accounts",
   };
 }
 
-async function persistRefreshedToken(
+async function loadDbAccount(
+  admin: ReturnType<typeof createAdminClient>,
+  accountId: string,
+): Promise<InstagramGraphAccount | null> {
+  const { data, error } = await admin
+    .from("social_accounts")
+    .select("id, account_id, account_name, access_token, token_expires_at")
+    .eq("platform", "instagram")
+    .eq("account_id", accountId)
+    .eq("enabled", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to load Instagram account:", error.message);
+    return null;
+  }
+  if (!data) return null;
+  return rowToAccount(data as Record<string, unknown>);
+}
+
+async function persistAccountToken(
   account: InstagramGraphAccount,
   accessToken: string,
   expiresIn: number,
-) {
-  const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
-  if (account.rowId === null) {
-    console.warn(
-      "Instagram token refreshed but not persisted — store credentials in social_accounts for automatic renewal.",
-    );
-    return tokenExpiresAt;
+): Promise<InstagramGraphAccount> {
+  const tokenExpiresAt = expiresAtFromSeconds(expiresIn);
+  const admin = tryAdminClient();
+  if (!admin) {
+    return { ...account, accessToken, tokenExpiresAt };
   }
 
-  const admin = tryAdminClient();
-  if (!admin) return tokenExpiresAt;
-
-  const { error } = await admin
+  const { data, error } = await admin
     .from("social_accounts")
-    .update({
-      access_token: accessToken,
-      token_expires_at: tokenExpiresAt,
-    })
-    .eq("id", account.rowId);
+    .upsert(
+      {
+        platform: "instagram",
+        account_id: account.accountId,
+        account_name: account.accountName,
+        access_token: accessToken,
+        token_expires_at: tokenExpiresAt,
+        enabled: true,
+      },
+      { onConflict: "platform,account_id" },
+    )
+    .select("id, account_id, account_name, access_token, token_expires_at")
+    .maybeSingle();
 
   if (error) {
-    console.error("Failed to persist refreshed Instagram token:", error.message);
+    console.error("Failed to persist Instagram token:", error.message);
+    return { ...account, accessToken, tokenExpiresAt };
   }
 
-  return tokenExpiresAt;
+  return (
+    rowToAccount((data ?? {}) as Record<string, unknown>) ?? {
+      ...account,
+      accessToken,
+      tokenExpiresAt,
+      credentialSource: "social_accounts",
+    }
+  );
+}
+
+async function exchangeForLongLivedToken(accessToken: string) {
+  const clientSecret = process.env.META_APP_SECRET?.trim();
+  if (!clientSecret) return null;
+
+  const url = new URL("https://graph.instagram.com/access_token");
+  url.searchParams.set("grant_type", "ig_exchange_token");
+  url.searchParams.set("client_secret", clientSecret);
+  url.searchParams.set("access_token", accessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json()) as RefreshResponse;
+
+  if (!response.ok || !payload.access_token || !payload.expires_in) {
+    if (isReauthorizationError(payload.error)) {
+      logInstagramAuthFailure("Instagram long-lived token exchange failed", payload.error, response.status);
+    }
+    return null;
+  }
+
+  return {
+    accessToken: payload.access_token,
+    expiresIn: payload.expires_in,
+  };
+}
+
+async function seedAccountFromEnv(
+  fromEnv: InstagramGraphAccount,
+): Promise<InstagramGraphAccount | null> {
+  const exchanged = await exchangeForLongLivedToken(fromEnv.accessToken);
+  const accessToken = exchanged?.accessToken ?? fromEnv.accessToken;
+  const expiresIn = exchanged?.expiresIn ?? LONG_LIVED_FALLBACK_SECONDS;
+  return persistAccountToken(fromEnv, accessToken, expiresIn);
+}
+
+export async function loadInstagramGraphAccount(): Promise<InstagramGraphAccount | null> {
+  const accountId = configuredAccountId();
+  const admin = tryAdminClient();
+
+  if (admin) {
+    const fromDb = await loadDbAccount(admin, accountId);
+    if (fromDb) return fromDb;
+
+    const fromEnv = accountFromEnv();
+    if (fromEnv) return seedAccountFromEnv(fromEnv);
+  }
+
+  return accountFromEnv();
 }
 
 /**
- * Long-lived Instagram user tokens last ~60 days and can be refreshed server-side:
+ * Long-lived Instagram Login tokens last ~60 days and can be refreshed server-side:
  * GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token
  */
 export async function ensureFreshInstagramToken(
@@ -161,41 +247,45 @@ export async function ensureFreshInstagramToken(
   const payload = (await response.json()) as RefreshResponse;
 
   if (!response.ok || !payload.access_token || !payload.expires_in) {
-    console.error(
-      "Instagram token refresh failed:",
-      payload.error?.message ?? response.status,
+    logInstagramAuthFailure(
+      "Instagram token refresh failed",
+      payload.error,
+      response.status,
     );
     return account.accessToken;
   }
 
-  await persistRefreshedToken(account, payload.access_token, payload.expires_in);
-  return payload.access_token;
+  const persisted = await persistAccountToken(
+    account,
+    payload.access_token,
+    payload.expires_in,
+  );
+  return persisted.accessToken;
 }
 
 function postFromMediaItem(
   item: GraphMediaItem,
   handle: string,
 ): InstagramPost | null {
+  const postId = asString(item.id);
   const permalink = asString(item.permalink);
-  const parsed = permalink ? parseInstagramPostUrl(permalink) : null;
-  const postId = parsed?.shortcode ?? asString(item.id);
   if (!postId) return null;
 
   const mediaType = asString(item.media_type)?.toUpperCase();
-  const productType = asString(item.media_product_type)?.toUpperCase();
-  const isVideo =
-    mediaType === "VIDEO" ||
-    productType === "REELS" ||
-    Boolean(permalink?.includes("/reel/"));
-
-  if (!isVideo) return null;
-
-  const videoUrl = asString(item.media_url);
+  const mediaUrl = asString(item.media_url);
   const thumbnailUrl = asString(item.thumbnail_url);
-  if (!videoUrl && !thumbnailUrl) return null;
 
-  const postPath =
-    productType === "REELS" || permalink?.includes("/reel/") ? "reel" : "p";
+  const isVideo = mediaType === "VIDEO";
+  const isImage = mediaType === "IMAGE";
+  const isCarousel = mediaType === "CAROUSEL_ALBUM";
+
+  // CAROUSEL_ALBUM: use the cover image only. Do not fetch child media.
+  const videoUrl = isVideo ? mediaUrl : null;
+  const previewUrl = isVideo
+    ? thumbnailUrl
+    : thumbnailUrl ?? (isImage || isCarousel ? mediaUrl : null);
+
+  if (!videoUrl && !previewUrl) return null;
 
   let publishedAt: string | undefined;
   if (item.timestamp) {
@@ -205,11 +295,14 @@ function postFromMediaItem(
     }
   }
 
+  const postPath = isVideo || permalink?.includes("/reel/") ? "reel" : "p";
+
   return toPost(handle, postId, {
     caption: asString(item.caption),
-    thumbnailUrl,
+    thumbnailUrl: previewUrl,
     videoUrl,
     postPath,
+    postUrl: permalink ?? undefined,
     authorName: handle,
     publishedAt,
   });
@@ -230,46 +323,55 @@ async function resolveHandle(
   return asString(payload.username) ?? fallback;
 }
 
-export async function fetchLatestInstagramVideoFromGraph(
+export async function fetchLatestInstagramMediaFromGraph(
   account: InstagramGraphAccount,
   accessToken: string,
 ): Promise<InstagramPost | null> {
   const handle = await resolveHandle(accessToken, account.accountName);
-  const mediaPath =
-    account.accountId === "me"
-      ? `${GRAPH_BASE}/me/media`
-      : `${GRAPH_BASE}/${encodeURIComponent(account.accountId)}/media`;
-
-  const url = new URL(mediaPath);
+  const url = new URL(
+    `${GRAPH_BASE}/${encodeURIComponent(account.accountId)}/media`,
+  );
   url.searchParams.set(
     "fields",
-    "id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp",
+    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp",
   );
-  url.searchParams.set("limit", "25");
+  url.searchParams.set("limit", "1");
   url.searchParams.set("access_token", accessToken);
 
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    const body = await response.text();
-    console.error("Instagram Graph API media fetch failed:", response.status, body);
+  let payload: {
+    error?: GraphAuthError;
+    data?: GraphMediaItem[];
+  };
+  try {
+    payload = (await response.json()) as typeof payload;
+  } catch {
+    console.error("Instagram Graph API media fetch failed:", response.status);
     return null;
   }
 
-  const payload = (await response.json()) as { data?: GraphMediaItem[] };
-  const items = Array.isArray(payload.data) ? payload.data : [];
-
-  for (const item of items) {
-    const post = postFromMediaItem(item, handle);
-    if (post) return post;
+  if (!response.ok || payload.error) {
+    logInstagramAuthFailure(
+      "Instagram Graph API media fetch failed",
+      payload.error,
+      response.status,
+    );
+    return null;
   }
 
-  return null;
+  const item = Array.isArray(payload.data) ? payload.data[0] : undefined;
+  if (!item) {
+    console.warn("Instagram Graph API returned no media.");
+    return null;
+  }
+
+  return postFromMediaItem(item, handle);
 }
 
-export async function syncLatestInstagramVideoFromGraph(): Promise<InstagramPost | null> {
+export async function syncLatestInstagramMediaFromGraph(): Promise<InstagramPost | null> {
   const account = await loadInstagramGraphAccount();
   if (!account) return null;
 
   const accessToken = await ensureFreshInstagramToken(account);
-  return fetchLatestInstagramVideoFromGraph(account, accessToken);
+  return fetchLatestInstagramMediaFromGraph(account, accessToken);
 }

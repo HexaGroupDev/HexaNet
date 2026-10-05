@@ -1,43 +1,45 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-function ProcessRowSkeleton({
-  titleWidth = "w-40",
-  showBadge = true,
+function ProcessBoxSkeleton({
+  titleWidth = "w-36",
+  nested = false,
 }: {
   titleWidth?: string;
-  showBadge?: boolean;
+  nested?: boolean;
 }) {
   return (
-    <div className="flex w-full items-center justify-between rounded-xl border px-4 py-3">
-      <div className="flex items-center gap-2">
-        <Skeleton className="size-5 rounded" />
-        <Skeleton className={`h-4 ${titleWidth}`} />
-      </div>
-      <div className="flex items-center gap-2">
-        {showBadge ? (
+    <div className="flex flex-col overflow-hidden rounded-xl border">
+      <div className="flex items-start justify-between gap-2 p-4 pb-3">
+        <div className="space-y-2">
+          <Skeleton className={`h-4 ${titleWidth}`} />
           <Skeleton className="h-5 w-16 rounded-full" />
-        ) : null}
-        <Skeleton className="h-4 w-24" />
+        </div>
         <Skeleton className="size-7 rounded-md" />
       </div>
+      {nested ? (
+        <div className="flex flex-col gap-2 border-t bg-muted/25 px-4 py-3">
+          <div className="space-y-2 rounded-xl border bg-background p-3">
+            <Skeleton className="h-3.5 w-28" />
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </div>
+          <div className="space-y-2 rounded-xl border bg-background p-3">
+            <Skeleton className="h-3.5 w-20" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 export function ProcessTreeSkeleton() {
   return (
-    <div className="flex flex-col gap-3">
-      <ProcessRowSkeleton titleWidth="w-44" />
-      <div className="flex min-w-0">
-        <div className="w-6 shrink-0" />
-        <ProcessRowSkeleton titleWidth="w-32" showBadge={false} />
-      </div>
-      <ProcessRowSkeleton titleWidth="w-52" />
-      <div className="flex min-w-0">
-        <div className="w-6 shrink-0" />
-        <ProcessRowSkeleton titleWidth="w-36" />
-      </div>
-      <ProcessRowSkeleton titleWidth="w-28" showBadge={false} />
+    <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <ProcessBoxSkeleton titleWidth="w-40" nested />
+      <ProcessBoxSkeleton titleWidth="w-32" />
+      <ProcessBoxSkeleton titleWidth="w-44" nested />
+      <ProcessBoxSkeleton titleWidth="w-28" />
+      <ProcessBoxSkeleton titleWidth="w-36" />
+      <ProcessBoxSkeleton titleWidth="w-24" nested />
     </div>
   );
 }

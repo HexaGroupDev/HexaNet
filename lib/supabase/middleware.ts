@@ -11,7 +11,8 @@ function hasAuthCookie(request: NextRequest) {
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/auth')
-  const isPublicRoute = pathname === '/' || isAuthRoute
+  const isCronRoute = pathname.startsWith('/api/cron/')
+  const isPublicRoute = pathname === '/' || isAuthRoute || isCronRoute
   const sessionCookiePresent = hasAuthCookie(request)
   const hasOAuthCode = request.nextUrl.searchParams.has('code')
   const hasOAuthError =

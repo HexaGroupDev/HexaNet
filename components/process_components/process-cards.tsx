@@ -21,56 +21,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-const TREE_INDENT_REM = 1.5;
-
 type ProcessNode = ProcessOption & { children: ProcessNode[] };
-
-function TreeBranch({
-  depth = 1,
-  isLastSibling = true,
-  guides = [],
-}: {
-  depth?: number;
-  isLastSibling?: boolean;
-  guides?: boolean[];
-}) {
-  if (depth <= 0) return null;
-
-  return (
-    <div
-      className="relative flex shrink-0"
-      style={{ width: `${depth * TREE_INDENT_REM}rem` }}
-      aria-hidden
-    >
-      {Array.from({ length: depth }, (_, level) => {
-        const isElbow = level === depth - 1;
-        const showGuide = !isElbow && guides[level];
-        return (
-          <div
-            key={level}
-            className="relative h-full"
-            style={{ width: `${TREE_INDENT_REM}rem` }}
-          >
-            {showGuide ? (
-              <span className="absolute left-1/2 -top-3 -bottom-3 w-px -translate-x-1/2 bg-border" />
-            ) : null}
-            {isElbow ? (
-              <>
-                <span
-                  className={cn(
-                    "absolute left-1/2 w-px -translate-x-1/2 bg-border",
-                    isLastSibling ? "-top-3 bottom-1/2" : "-top-3 -bottom-3",
-                  )}
-                />
-                <span className="absolute left-1/2 top-1/2 h-px w-1/2 bg-border" />
-              </>
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function buildProcessTree(processes: ProcessOption[]): ProcessNode[] {
   const nodes = new Map<number, ProcessNode>();
@@ -90,117 +41,114 @@ function buildProcessTree(processes: ProcessOption[]): ProcessNode[] {
   return roots;
 }
 
-function ProcessTreeItem({
+function ProcessBoardCard({
   node,
   processOptions,
   depth = 0,
-  isLastSibling = true,
-  guides = [],
 }: {
   node: ProcessNode;
   processOptions: ProcessOption[];
   depth?: number;
-  isLastSibling?: boolean;
-  guides?: boolean[];
 }) {
   const hasChildren = node.children.length > 0;
   const href = node.process_slug
     ? `/dashboard/process/${node.process_slug}`
     : "#";
-
-  const card = (
-    <Card
-      className={cn(
-        "group/card relative flex-row items-center justify-between px-(--card-spacing) py-3",
-        depth > 0 ? "min-w-0 flex-1" : "w-full",
-      )}
-    >
-      <Link
-        href={href}
-        className="absolute inset-0 z-0 cursor-pointer"
-        aria-label={node.process_name}
-      />
-      <div className="pointer-events-none relative z-10 flex items-center gap-2">
-        <CollapsibleTrigger
-          disabled={!hasChildren}
-          className={cn(
-            "rounded p-1",
-            hasChildren
-              ? "pointer-events-auto duration-100 hover:cursor-pointer hover:bg-muted/80"
-              : "text-muted-foreground/40 disabled:pointer-events-none",
-          )}
-        >
-          <ChevronDown
-            className={cn(
-              "size-5",
-              hasChildren &&
-                "transition-transform duration-200 group-data-[open]/process:-rotate-90",
-            )}
-          />
-        </CollapsibleTrigger>
-        <div>
-          <p className="font-medium">{node.process_name}</p>
-          <div className="h-px w-full origin-left scale-x-0 bg-primary transition-transform duration-200 group-hover/card:scale-x-100" />
-        </div>
-      </div>
-      <div className="pointer-events-none relative z-10 flex shrink-0 items-center gap-1">
-        {node.process_labels.length > 0 ? (
-          <div className="mx-3 flex flex-wrap items-center justify-end gap-1">
-            {node.process_labels.map((label) => (
-              <Badge key={label}>{label}</Badge>
-            ))}
-          </div>
-        ) : null}
-        <p className="text-sm text-muted-foreground tabular-nums">
-          {node.children.length} sub-processes
-        </p>
-        <div className="pointer-events-auto">
-          <AddProcess
-            trigger={<CirclePlus />}
-            parentId={node.id}
-            processes={processOptions}
-            triggerVariant="ghost"
-            triggerSize="icon-sm"
-            triggerClassName="text-muted-foreground hover:text-foreground"
-            ariaLabel="Add sub-process"
-          />
-        </div>
-      </div>
-    </Card>
-  );
+  const isRoot = depth === 0;
 
   return (
-    <Collapsible defaultOpen className="group/process w-full">
-      <div className="flex flex-col gap-3">
-        {depth > 0 ? (
-          <div className="flex min-w-0">
-            <TreeBranch
-              depth={depth}
-              isLastSibling={isLastSibling}
-              guides={guides}
-            />
-            {card}
-          </div>
-        ) : (
-          card
+    <Collapsible
+      defaultOpen={depth < 2}
+      className="group/process min-w-0 w-full"
+    >
+      <Card
+        className={cn(
+          "relative flex w-full flex-col gap-0 overflow-hidden",
+          isRoot ? "bg-card" : "bg-background shadow-none ring-border/60",
         )}
-        <CollapsibleContent>
-          {hasChildren ? (
-            <div className="flex flex-col gap-3">
-              {node.children.map((child, index) => (
-                <ProcessTreeItem
+      >
+        <div
+          className={cn(
+            "group/process-header relative flex items-start justify-between gap-2",
+            isRoot ? "px-(--card-spacing) pb-3" : "px-3 py-2.5",
+          )}
+        >
+          <Link
+            href={href}
+            className="absolute inset-0 z-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={node.process_name}
+          />
+          <div className="pointer-events-none relative z-10 min-w-0 flex-1">
+            <div className="flex items-start gap-1.5">
+              {hasChildren ? (
+                <CollapsibleTrigger
+                  className="pointer-events-auto mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:cursor-pointer hover:bg-muted hover:text-foreground"
+                  aria-label={`Toggle ${node.process_name} sub-processes`}
+                >
+                  <ChevronDown className="size-4 transition-transform duration-200 group-data-[open]/process:rotate-180" />
+                </CollapsibleTrigger>
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <p
+                  className={cn(
+                    "leading-snug wrap-break-word",
+                    isRoot ? "font-medium" : "text-sm font-medium",
+                  )}
+                >
+                  {node.process_name}
+                </p>
+                <div className="mt-0.5 h-px w-full origin-left scale-x-0 bg-primary transition-transform duration-200 group-hover/process-header:scale-x-100 group-focus-within/process-header:scale-x-100" />
+                {node.process_labels.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {node.process_labels.map((label) => (
+                      <Badge key={label} className={cn(!isRoot && "text-[10px]")}>
+                        {label}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+                {hasChildren ? (
+                  <p className="mt-1.5 text-xs text-muted-foreground tabular-nums">
+                    {node.children.length} sub-process
+                    {node.children.length === 1 ? "" : "es"}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <div className="pointer-events-auto relative z-10 shrink-0">
+            <AddProcess
+              trigger={<CirclePlus />}
+              parentId={node.id}
+              processes={processOptions}
+              triggerVariant="ghost"
+              triggerSize="icon-sm"
+              triggerClassName="text-muted-foreground hover:text-foreground"
+              ariaLabel="Add sub-process"
+            />
+          </div>
+        </div>
+
+        {hasChildren ? (
+          <CollapsibleContent>
+            <div
+              className={cn(
+                "flex flex-col gap-2 border-t border-border/50 bg-muted/25",
+                isRoot ? "px-(--card-spacing) py-3" : "px-2.5 py-2",
+              )}
+            >
+              {node.children.map((child) => (
+                <ProcessBoardCard
                   key={child.id}
                   node={child}
                   processOptions={processOptions}
                   depth={depth + 1}
-                  isLastSibling={index === node.children.length - 1}
-                  guides={depth === 0 ? [] : [...guides, !isLastSibling]}
                 />
               ))}
             </div>
-          ) : null}
-        </CollapsibleContent>
-      </div>
+          </CollapsibleContent>
+        ) : null}
+      </Card>
     </Collapsible>
   );
 }
@@ -237,9 +185,9 @@ export function ProcessCards({
   const tree = buildProcessTree(processes);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
       {tree.map((node) => (
-        <ProcessTreeItem
+        <ProcessBoardCard
           key={node.id}
           node={node}
           processOptions={options}

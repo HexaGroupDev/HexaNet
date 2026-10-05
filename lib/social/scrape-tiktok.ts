@@ -59,6 +59,67 @@ function httpUrl(value: unknown) {
   }
 }
 
+function firstHttpUrl(...candidates: unknown[]): string | null {
+  for (const candidate of candidates) {
+    const direct = httpUrl(candidate);
+    if (direct) return direct;
+
+    const record = asRecord(candidate);
+    if (record) {
+      const nested =
+        firstHttpUrl(
+          record.url_list,
+          record.UrlList,
+          record.urlList,
+          record.url,
+          record.Url,
+          record.uri,
+          record.playAddr,
+          record.PlayAddr,
+          record.downloadAddr,
+          record.DownloadAddr,
+        ) ?? null;
+      if (nested) return nested;
+    }
+
+    if (Array.isArray(candidate)) {
+      for (const item of candidate) {
+        const nested = firstHttpUrl(item);
+        if (nested) return nested;
+      }
+    }
+  }
+  return null;
+}
+
+function mediaUrlFromVideo(video: Record<string, unknown> | null) {
+  if (!video) return null;
+  return firstHttpUrl(
+    video.playAddr,
+    video.PlayAddr,
+    video.downloadAddr,
+    video.DownloadAddr,
+    video.play_addr,
+    video.download_addr,
+    video.bitrateInfo,
+    video.bit_rate,
+    video.bitrate,
+  );
+}
+
+function coverUrlFromVideo(video: Record<string, unknown> | null) {
+  if (!video) return null;
+  return firstHttpUrl(
+    video.cover,
+    video.originCover,
+    video.dynamicCover,
+    video.coverUrl,
+    video.originCoverUrl,
+    video.dynamicCoverUrl,
+    video.zoomCover,
+  );
+}
+
 function videoIdFromUnknown(value: unknown) {
   if (typeof value === "string" && /^\d{10,}$/.test(value)) return value;
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -103,16 +164,17 @@ function postFromItem(
   return toPost(itemHandle, id, {
     caption: asString(item.desc) ?? asString(item.description) ?? asString(video?.desc),
     thumbnailUrl:
-      httpUrl(item.coverUrl) ??
-      httpUrl(item.originCoverUrl) ??
-      httpUrl(item.dynamicCoverUrl) ??
-      httpUrl(video?.cover) ??
-      httpUrl(video?.originCover) ??
-      httpUrl(video?.dynamicCover),
+      firstHttpUrl(
+        item.coverUrl,
+        item.originCoverUrl,
+        item.dynamicCoverUrl,
+        item.cover,
+        item.originCover,
+        item.dynamicCover,
+      ) ?? coverUrlFromVideo(video),
     videoUrl:
-      httpUrl(item.playAddr) ??
-      httpUrl(video?.playAddr) ??
-      httpUrl(video?.downloadAddr),
+      firstHttpUrl(item.playAddr, item.downloadAddr, item.videoUrl) ??
+      mediaUrlFromVideo(video),
     authorName:
       asString(author?.nickname) ??
       asString(item.nickname) ??

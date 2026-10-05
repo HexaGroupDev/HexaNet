@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { SocialCarousel } from "@/components/dashboard_components/social-carousel";
+import { loadFacebookPosts } from "@/lib/social/load-facebook";
 import { loadInstagramPosts } from "@/lib/social/load-instagram";
 import { SOCIAL_PLATFORMS, type SocialSlide } from "@/lib/social/slide";
 import { loadTikTokPosts } from "@/lib/social/load-tiktok";
@@ -41,13 +42,23 @@ export function SocialMediaWallSkeleton() {
   );
 }
 
+function firstPost<T>(result: PromiseSettledResult<T[]>): T | null {
+  if (result.status === "rejected") {
+    console.error("Social platform load failed:", result.reason);
+    return null;
+  }
+  return result.value[0] ?? null;
+}
+
 export async function SocialMediaWall() {
-  const [tiktokPosts, instagramPosts] = await Promise.all([
+  const [tiktokResult, instagramResult, facebookResult] = await Promise.allSettled([
     loadTikTokPosts(),
     loadInstagramPosts(),
+    loadFacebookPosts(),
   ]);
-  const tiktok = tiktokPosts[0] ?? null;
-  const instagram = instagramPosts[0] ?? null;
+  const tiktok = firstPost(tiktokResult);
+  const instagram = firstPost(instagramResult);
+  const facebook = firstPost(facebookResult);
 
   const slides: SocialSlide[] = SOCIAL_PLATFORMS.map(({ platform, label }) => {
     if (platform === "instagram" && instagram) {
@@ -74,6 +85,19 @@ export async function SocialMediaWall() {
         authorName: tiktok.authorName,
         handle: tiktok.handle,
         publishedAt: tiktok.publishedAt,
+      };
+    }
+    if (platform === "facebook" && facebook) {
+      return {
+        platform,
+        label,
+        postUrl: facebook.postUrl,
+        caption: facebook.caption,
+        thumbnailUrl: facebook.thumbnailUrl,
+        videoUrl: facebook.videoUrl,
+        authorName: facebook.authorName,
+        handle: facebook.handle,
+        publishedAt: facebook.publishedAt,
       };
     }
     return placeholderSlide(platform, label);

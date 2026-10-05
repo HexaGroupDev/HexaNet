@@ -9,7 +9,6 @@ const navigationItems = [
   { label: "Process", href: "/dashboard/process" },
   { label: "Wiki", href: "/dashboard/wiki" },
   { label: "Community", href: "/dashboard/community" },
-  { label: "News", href: "/dashboard/news" },
 ];
 
 export function NavLinks() {

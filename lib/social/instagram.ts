@@ -48,7 +48,7 @@ export function toPost(
   handle: string,
   postId: string,
   extras: Partial<
-    Omit<InstagramPost, "platform" | "postId" | "handle" | "postUrl">
+    Omit<InstagramPost, "platform" | "postId" | "handle">
   > & { postPath?: "p" | "reel" | "tv" },
 ): InstagramPost {
   const cleanHandle = handle.replace(/^@/, "");
@@ -58,7 +58,8 @@ export function toPost(
     platform: "instagram",
     postId,
     handle: cleanHandle,
-    postUrl: `https://www.instagram.com/${path}/${postId}/`,
+    postUrl:
+      extras.postUrl ?? `https://www.instagram.com/${path}/${postId}/`,
     caption: extras.caption ?? null,
     thumbnailUrl: extras.thumbnailUrl ?? null,
     videoUrl: extras.videoUrl ?? null,

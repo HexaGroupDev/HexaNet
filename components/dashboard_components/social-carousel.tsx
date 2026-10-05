@@ -23,6 +23,15 @@ function nextDelay() {
   );
 }
 
+const PLATFORM_CHROME: Record<
+  SocialSlide["platform"],
+  { title: string; icon: string; invertIcon?: boolean }
+> = {
+  facebook: { title: "FACEBOOK", icon: "/facebook.png" },
+  instagram: { title: "INSTAGRAM", icon: "/instagram.png", invertIcon: true },
+  tiktok: { title: "TIKTOK", icon: "/tik-tok.png" },
+};
+
 function formatPublishedAt(value: string | null) {
   if (!value) return null;
   const date = new Date(value);
@@ -46,6 +55,11 @@ function SocialPostCard({
   const published = formatPublishedAt(slide.publishedAt);
   const showVideo = Boolean(slide.videoUrl) && !videoFailed;
   const placeholder = !slide.videoUrl && !slide.thumbnailUrl && !slide.caption;
+  const chrome = PLATFORM_CHROME[slide.platform];
+
+  useEffect(() => {
+    setVideoFailed(false);
+  }, [slide.videoUrl, slide.thumbnailUrl]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -109,6 +123,8 @@ function SocialPostCard({
           alt={slide.caption || `${slide.label} post`}
           className="h-full w-full object-cover"
         />
+      ) : slide.caption ? (
+        <div className="h-full w-full bg-muted" />
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-1 px-6 text-center">
           <p className="font-medium">{slide.label}</p>
@@ -121,6 +137,26 @@ function SocialPostCard({
   const body = (
     <Card className="relative mx-auto aspect-[9/16] h-[24rem] overflow-hidden border py-0">
       {media}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] bg-gradient-to-b from-black/70 via-black/35 to-transparent px-3 pt-3 pb-9 text-white">
+        <div className="flex items-center gap-2">
+          <img
+            src={chrome.icon}
+            alt=""
+            className={cn(
+              "size-5 shrink-0 object-contain",
+              chrome.invertIcon && "brightness-0 invert",
+            )}
+            style={
+              chrome.invertIcon
+                ? { filter: "brightness(0) invert(1)" }
+                : undefined
+            }
+          />
+          <p className="truncate text-[11px] font-semibold tracking-[0.16em] text-white">
+            {chrome.title}
+          </p>
+        </div>
+      </div>
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 pt-8 text-white">
         <div className="flex items-baseline justify-between gap-3">
           <p className="truncate text-sm font-medium">

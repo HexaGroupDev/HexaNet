@@ -98,10 +98,7 @@ function NewsPreviewCard({
           {article.title}
         </h3>
         <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-          {formatNewsExcerpt(article.body)}{" "}
-          <span className="font-medium text-foreground/80 transition-colors group-hover:text-primary">
-            read more
-          </span>
+          {formatNewsExcerpt(article.body)}
         </p>
       </div>
     </div>

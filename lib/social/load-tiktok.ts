@@ -1,11 +1,16 @@
 import { scrapeLatestTikTokVideo } from "@/lib/social/scrape-tiktok";
 import {
+  needsPersistedTikTokMedia,
+  persistTikTokMedia,
+} from "@/lib/social/persist-tiktok-media";
+import {
   isTikTokUrl,
   parseTikTokVideoUrl,
   toPost,
   type TikTokPost,
 } from "@/lib/social/tiktok";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { withJwtSkewRetry } from "@/lib/supabase/jwt-skew";
 import { createClient } from "@/lib/supabase/server";
 
 const SYNC_ID = "tiktok";
@@ -19,6 +24,11 @@ function tryAdminClient() {
     console.error("TikTok cache write skipped:", error);
     return null;
   }
+}
+
+/** Prefer service-role for shared social reads so Auth JWT clock skew can't block the wall. */
+async function getSocialReadClient() {
+  return tryAdminClient() ?? (await createClient());
 }
 
 function asString(value: unknown) {
@@ -44,13 +54,19 @@ function hasMedia(post: TikTokPost) {
   return Boolean(post.videoUrl || post.thumbnailUrl);
 }
 
+function hasPlayableMedia(post: TikTokPost) {
+  return hasMedia(post) && !needsPersistedTikTokMedia(post);
+}
+
 async function loadProfileUrls() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("social_embed_urls")
-    .select("url")
-    .eq("enabled", true)
-    .order("sort_order", { ascending: true });
+  const supabase = await getSocialReadClient();
+  const { data, error } = await withJwtSkewRetry(() =>
+    supabase
+      .from("social_embed_urls")
+      .select("url")
+      .eq("enabled", true)
+      .order("sort_order", { ascending: true }),
+  );
 
   if (error) {
     console.error("Failed to load TikTok profile URLs:", error.message);
@@ -63,14 +79,16 @@ async function loadProfileUrls() {
 }
 
 async function loadCachedPosts(): Promise<TikTokPost[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("social_posts")
-    .select(
-      "author_name, text, media_url, thumbnail_url, post_url, created_at, fetched_at",
-    )
-    .eq("platform", "tiktok")
-    .order("fetched_at", { ascending: false });
+  const supabase = await getSocialReadClient();
+  const { data, error } = await withJwtSkewRetry(() =>
+    supabase
+      .from("social_posts")
+      .select(
+        "author_name, text, media_url, thumbnail_url, post_url, created_at, fetched_at",
+      )
+      .eq("platform", "tiktok")
+      .order("fetched_at", { ascending: false }),
+  );
 
   if (error) {
     console.error("Failed to load cached TikTok posts:", error.message);
@@ -98,18 +116,24 @@ async function cachePost(post: TikTokPost) {
   const admin = tryAdminClient();
   if (!admin) return false;
 
+  const persisted = await persistTikTokMedia(admin, post);
+  if (!hasMedia(persisted)) {
+    console.error("TikTok post has no playable media after persist.");
+    return false;
+  }
+
   const now = new Date().toISOString();
   const { error } = await admin.from("social_posts").upsert(
     {
       platform: "tiktok",
-      external_id: post.videoId,
-      author_name: post.authorName,
-      text: post.caption,
-      media_url: post.videoUrl,
-      thumbnail_url: post.thumbnailUrl,
+      external_id: persisted.videoId,
+      author_name: persisted.authorName,
+      text: persisted.caption,
+      media_url: persisted.videoUrl,
+      thumbnail_url: persisted.thumbnailUrl,
       media_type: "video",
-      post_url: post.postUrl,
-      created_at: post.publishedAt,
+      post_url: persisted.postUrl,
+      created_at: persisted.publishedAt,
       fetched_at: now,
     },
     { onConflict: "platform,external_id" },
@@ -150,7 +174,8 @@ async function syncIfStale(profileUrls: string[], cached: TikTokPost[]) {
   const lastUpdated = Date.parse(String(data?.last_updated ?? EPOCH));
   const fresh =
     Number.isFinite(lastUpdated) && Date.now() - lastUpdated < STALE_AFTER_MS;
-  const incomplete = cached.length === 0 || cached.some((post) => !hasMedia(post));
+  const incomplete =
+    cached.length === 0 || cached.some((post) => !hasPlayableMedia(post));
   if (fresh && !incomplete) return;
 
   try {

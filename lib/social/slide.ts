@@ -1,4 +1,4 @@
-export type SocialPlatform = "instagram" | "tiktok" | "linkedin";
+export type SocialPlatform = "instagram" | "tiktok" | "facebook";
 
 export type SocialSlide = {
   platform: SocialPlatform;
@@ -18,5 +18,5 @@ export const SOCIAL_PLATFORMS: {
 }[] = [
   { platform: "instagram", label: "Instagram" },
   { platform: "tiktok", label: "TikTok" },
-  { platform: "linkedin", label: "LinkedIn" },
+  { platform: "facebook", label: "Facebook" },
 ];
