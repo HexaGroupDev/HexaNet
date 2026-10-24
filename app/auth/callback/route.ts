@@ -2,19 +2,17 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getRequestOrigin } from "@/lib/supabase/request-origin";
 import { redirectWithFlash } from "@/lib/alerts/flash";
+import {
+  AUTH_NEXT_COOKIE,
+  authNextCookieOptions,
+  safeInternalPath,
+} from "@/lib/supabase/auth-next";
 
 const DEFAULT_REDIRECT = "/dashboard";
 const DETAILS_PATH = "/auth/details";
 
 function resolveRedirectPath(nextParam: string | null): string {
-  if (
-    nextParam &&
-    nextParam.startsWith("/") &&
-    !nextParam.startsWith("//")
-  ) {
-    return nextParam;
-  }
-  return DEFAULT_REDIRECT;
+  return safeInternalPath(nextParam) ?? DEFAULT_REDIRECT;
 }
 
 function isFlowStateConsumed(error: { code?: string; message: string }) {
@@ -32,6 +30,7 @@ function redirectWithCookies(
   source.cookies.getAll().forEach((cookie) => {
     response.cookies.set(cookie);
   });
+  response.cookies.set(AUTH_NEXT_COOKIE, "", authNextCookieOptions(0));
   response.headers.set("Cache-Control", "no-store");
   return response;
 }
@@ -40,7 +39,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const origin = getRequestOrigin(request);
   const code = searchParams.get("code");
-  const next = resolveRedirectPath(searchParams.get("next"));
+  const next = resolveRedirectPath(
+    searchParams.get("next") ?? request.cookies.get(AUTH_NEXT_COOKIE)?.value ?? null,
+  );
   const oauthError =
     searchParams.get("error_description") ?? searchParams.get("error");
 

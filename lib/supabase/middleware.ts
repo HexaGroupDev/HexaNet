@@ -1,11 +1,30 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { applyFlashAlert } from '@/lib/alerts/flash'
+import {
+  AUTH_NEXT_COOKIE,
+  authNextCookieOptions,
+  safeInternalPath,
+} from '@/lib/supabase/auth-next'
 
 function hasAuthCookie(request: NextRequest) {
   return request.cookies
     .getAll()
     .some((cookie) => cookie.name.includes('-auth-token'))
+}
+
+function redirectToLogin(
+  request: NextRequest,
+  redirect: (url: URL) => NextResponse = (url) => NextResponse.redirect(url),
+) {
+  const next = safeInternalPath(request.nextUrl.pathname) ?? '/dashboard'
+  const url = request.nextUrl.clone()
+  url.pathname = '/auth/login'
+  url.search = ''
+  url.searchParams.set('next', next)
+  const response = redirect(url)
+  response.cookies.set(AUTH_NEXT_COOKIE, next, authNextCookieOptions())
+  return response
 }
 
 export async function updateSession(request: NextRequest) {
@@ -37,7 +56,8 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = '/auth/callback'
       if (!url.searchParams.has('next')) {
-        url.searchParams.set('next', '/dashboard')
+        const saved = safeInternalPath(request.cookies.get(AUTH_NEXT_COOKIE)?.value)
+        url.searchParams.set('next', saved ?? '/dashboard')
       }
       return NextResponse.redirect(url)
     }
@@ -68,10 +88,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.next({ request })
     }
 
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    url.searchParams.set('next', pathname)
-    return NextResponse.redirect(url)
+    return redirectToLogin(request)
   }
 
   let supabaseResponse = NextResponse.next({
@@ -127,10 +144,7 @@ export async function updateSession(request: NextRequest) {
 
   // Unauthenticated users cannot access protected routes (e.g. /dashboard)
   if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    url.searchParams.set('next', pathname)
-    return redirectWithSession(url)
+    return redirectToLogin(request, redirectWithSession)
   }
 
   // Signed-in users skip login/sign-up; keep onboarding + session routes reachable
@@ -141,10 +155,20 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/auth/details')
 
   if (user && isAuthRoute && !authPassthrough) {
+    const requested =
+      safeInternalPath(request.nextUrl.searchParams.get('next')) ??
+      safeInternalPath(request.cookies.get(AUTH_NEXT_COOKIE)?.value)
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    url.search = ''
-    return redirectWithSession(url)
+    const destination = requested
+      ? new URL(requested, url.origin)
+      : url
+    if (!requested) {
+      destination.pathname = '/dashboard'
+      destination.search = ''
+    }
+    const redirectResponse = redirectWithSession(destination)
+    redirectResponse.cookies.set(AUTH_NEXT_COOKIE, '', authNextCookieOptions(0))
+    return redirectResponse
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
