@@ -71,7 +71,7 @@ function ProcessLabels({
     const el = scrollerRef.current;
     if (!el) return;
 
-    function update() {
+    const update = () => {
       const overflow = el.scrollWidth - el.clientWidth > 1;
       const start = overflow && el.scrollLeft > 1;
       const end =
@@ -79,7 +79,7 @@ function ProcessLabels({
       setEdges((prev) =>
         prev.start === start && prev.end === end ? prev : { start, end },
       );
-    }
+    };
 
     update();
     const observer = new ResizeObserver(update);
