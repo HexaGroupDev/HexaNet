@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 
 const descriptionClassName =
@@ -109,8 +111,34 @@ export function ProcessDescription({
 
   const display = description || "No description yet.";
 
+  function startEditing() {
+    setDraft(description);
+    setError(null);
+    setEditing(true);
+  }
+
   return (
     <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex items-center justify-between gap-2">
+        <CardTitle>Description</CardTitle>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="shrink-0 text-muted-foreground"
+          aria-label="Edit description"
+          aria-pressed={editing}
+          disabled={pending}
+          onMouseDown={(e) => {
+            if (editing) e.preventDefault();
+          }}
+          onClick={() => {
+            if (!editing) startEditing();
+          }}
+        >
+          <Pencil />
+        </Button>
+      </div>
       {editing ? (
         <textarea
           ref={textareaRef}
@@ -138,28 +166,14 @@ export function ProcessDescription({
               });
             }
           }}
-          className={`${descriptionClassName} cursor-text disabled:opacity-50`}
+          className={`${descriptionClassName} min-w-0 cursor-text disabled:opacity-50`}
         />
       ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setDraft(description);
-            setError(null);
-            setEditing(true);
-          }}
-          className="group relative w-full cursor-pointer pr-7 text-left"
+        <p
+          className={`${descriptionClassName} whitespace-pre-wrap ${description ? "" : "opacity-70"}`}
         >
-          <span
-            className={`${descriptionClassName} block whitespace-pre-wrap ${description ? "" : "opacity-70"}`}
-          >
-            {display}
-          </span>
-          <Pencil
-            aria-hidden
-            className="pointer-events-none absolute top-0.5 right-0 size-4 text-muted-foreground opacity-0 duration-150 group-hover:opacity-100"
-          />
-        </button>
+          {display}
+        </p>
       )}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>

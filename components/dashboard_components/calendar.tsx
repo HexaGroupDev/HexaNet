@@ -164,11 +164,11 @@ function WishBirthdayButton({
 
 function CalendarEventRowSkeleton() {
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex min-w-0 items-start gap-3">
       <Skeleton className="size-10 shrink-0 rounded-lg" />
       <div className="min-w-0 flex-1 border-l-2 border-muted py-0.5 pl-3">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="mt-1.5 h-3 w-16" />
+        <Skeleton className="h-4 w-full max-w-40" />
+        <Skeleton className="mt-1.5 h-3 w-16 max-w-full" />
       </div>
     </div>
   );
@@ -176,11 +176,11 @@ function CalendarEventRowSkeleton() {
 
 function CalendarBirthdayRowSkeleton() {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       <Skeleton className="size-8 shrink-0 rounded-full" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-4 w-full max-w-28" />
+        <Skeleton className="h-3 w-16 max-w-full" />
       </div>
     </div>
   );
@@ -188,17 +188,17 @@ function CalendarBirthdayRowSkeleton() {
 
 export function CalendarSkeleton() {
   return (
-    <Card className="border" size="sm" aria-busy="true">
-      <CardHeader className="flex items-center justify-between">
-        <Skeleton className="h-5 w-36" />
-        <Skeleton className="size-7 rounded-lg" />
+    <Card className="min-w-0 border" size="sm" aria-busy="true">
+      <CardHeader className="flex min-w-0 items-center justify-between">
+        <Skeleton className="h-5 w-36 min-w-0 max-w-full" />
+        <Skeleton className="size-7 shrink-0 rounded-lg" />
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <CalendarEventRowSkeleton />
       </CardContent>
       <Separator />
-      <CardHeader>
-        <Skeleton className="h-5 w-40" />
+      <CardHeader className="min-w-0">
+        <Skeleton className="h-5 w-full max-w-40" />
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <CalendarBirthdayRowSkeleton />

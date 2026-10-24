@@ -7,13 +7,16 @@ export default function CommunityLoading() {
         <Skeleton className="h-3 w-56" />
         <Skeleton className="h-8 w-44" />
       </div>
-      <div className="flex flex-col">
-        {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} className="flex items-center gap-3 px-1 py-2">
-            <Skeleton className="size-8 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-32" />
-              <Skeleton className="h-2.5 w-20" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {Array.from({ length: 8 }, (_, index) => (
+          <div
+            key={index}
+            className="overflow-hidden rounded-xl ring-1 ring-foreground/10"
+          >
+            <Skeleton className="aspect-[4/5] w-full rounded-none" />
+            <div className="space-y-1.5 px-4 py-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-2.5 w-16" />
             </div>
           </div>
         ))}

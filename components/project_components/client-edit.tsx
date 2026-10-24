@@ -251,10 +251,17 @@ export function EditClientContact({
     try {
       const currentData = await loadClientData(supabase, clientId);
       const nextContact: ClientContact = {
-        name: draft.name.trim(),
-        job: draft.job.trim(),
-        email: draft.email.trim(),
-        phone: draft.phone.trim(),
+        kind: draft.kind,
+        company: {
+          email: draft.company.email.trim(),
+          phone: draft.company.phone.trim(),
+        },
+        personal: {
+          name: draft.personal.name.trim(),
+          job: draft.personal.job.trim(),
+          email: draft.personal.email.trim(),
+          phone: draft.personal.phone.trim(),
+        },
       };
 
       await saveClientData(supabase, clientId, {
@@ -294,46 +301,88 @@ export function EditClientContact({
         </DialogHeader>
         <FieldGroup>
           <Field>
-            <FieldLabel>Name</FieldLabel>
+            <FieldLabel>Company email</FieldLabel>
             <Input
-              value={draft.name}
+              type="email"
+              value={draft.company.email}
               onChange={(e) =>
-                setDraft((prev) => ({ ...prev, name: e.target.value }))
+                setDraft((prev) => ({
+                  ...prev,
+                  company: { ...prev.company, email: e.target.value },
+                }))
+              }
+              disabled={pending}
+              placeholder="e.g. hello@example.com"
+            />
+          </Field>
+          <Field>
+            <FieldLabel>Company phone</FieldLabel>
+            <Input
+              type="tel"
+              value={draft.company.phone}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  company: { ...prev.company, phone: e.target.value },
+                }))
+              }
+              disabled={pending}
+              placeholder="e.g. +33 1 84 80 20 10"
+            />
+          </Field>
+          <Field>
+            <FieldLabel>Personal name</FieldLabel>
+            <Input
+              value={draft.personal.name}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  personal: { ...prev.personal, name: e.target.value },
+                }))
               }
               disabled={pending}
               placeholder="e.g. Camille Laurent"
             />
           </Field>
           <Field>
-            <FieldLabel>Job</FieldLabel>
+            <FieldLabel>Personal job</FieldLabel>
             <Input
-              value={draft.job}
+              value={draft.personal.job}
               onChange={(e) =>
-                setDraft((prev) => ({ ...prev, job: e.target.value }))
+                setDraft((prev) => ({
+                  ...prev,
+                  personal: { ...prev.personal, job: e.target.value },
+                }))
               }
               disabled={pending}
               placeholder="e.g. Operations Director"
             />
           </Field>
           <Field>
-            <FieldLabel>Email</FieldLabel>
+            <FieldLabel>Personal email</FieldLabel>
             <Input
               type="email"
-              value={draft.email}
+              value={draft.personal.email}
               onChange={(e) =>
-                setDraft((prev) => ({ ...prev, email: e.target.value }))
+                setDraft((prev) => ({
+                  ...prev,
+                  personal: { ...prev.personal, email: e.target.value },
+                }))
               }
               disabled={pending}
               placeholder="e.g. camille@example.com"
             />
           </Field>
           <Field>
-            <FieldLabel>Phone</FieldLabel>
+            <FieldLabel>Personal phone</FieldLabel>
             <Input
               type="tel"
-              value={draft.phone}
+              value={draft.personal.phone}
               onChange={(e) =>
-                setDraft((prev) => ({ ...prev, phone: e.target.value }))
+                setDraft((prev) => ({
+                  ...prev,
+                  personal: { ...prev.personal, phone: e.target.value },
+                }))
               }
               disabled={pending}
               placeholder="e.g. +33 1 84 80 20 10"

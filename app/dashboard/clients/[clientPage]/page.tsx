@@ -17,30 +17,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AddProject } from "@/components/project_components/add-project";
 import { ClientSettings } from "@/components/project_components/client-settings";
-import {
-  EditClientContact,
-  EditClientInformation,
-  EditFinancialServiceContact,
-} from "@/components/project_components/client-edit";
 import { ProjectEngagementList } from "@/components/project_components/project-engagement-list";
+import { parseClientData } from "@/lib/clients/client-data";
 import { canEdit } from "@/lib/profiles/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { getCachedSessionProfile } from "@/lib/supabase/cached-session-profile";
-import {
-  BriefcaseBusiness,
-  Building2,
-  Folder,
-  FolderKanban,
-  Landmark,
-  Mail,
-  MapPin,
-  Phone,
-  Plus,
-  UserRound,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { ClientCards } from "@/components/clients_components/client-cards";
 
 type ClientRow = {
@@ -48,6 +32,7 @@ type ClientRow = {
   client_name: string;
   client_slug: string;
   created_at: string;
+  client_data: unknown;
 };
 
 type ProjectRow = {
@@ -64,66 +49,6 @@ type ProfileRow = {
   username: string | null;
 };
 
-const EMPTY = "—";
-
-const exampleDetails = {
-  address: "15 Rue de la Paix, 75002 Paris, France",
-  financial_service: "BNP Paribas Corporate Banking",
-  client_contact: {
-    name: "Camille Laurent",
-    job: "Operations Director",
-    email: "camille.laurent@example.com",
-    phone: "+33 1 84 80 20 10",
-  },
-  financial_service_contact: {
-    title: "Corporate Account Manager",
-    email: "account.manager@example.com",
-    phone: "+33 1 42 98 12 40",
-  },
-};
-
-function displayValue(value: string) {
-  return value || EMPTY;
-}
-
-function ContactDetail({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: typeof Mail;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 gap-3">
-      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="break-words">{children}</dd>
-      </div>
-    </div>
-  );
-}
-
-function TextValue({ value, href }: { value: string; href?: string }) {
-  if (!value) return <>{EMPTY}</>;
-  if (!href) return <>{value}</>;
-
-  const isExternal = href.startsWith("http");
-
-  return (
-    <a
-      className="cursor-pointer hover:underline"
-      href={href}
-      target={isExternal ? "_blank" : undefined}
-      rel={isExternal ? "noreferrer" : undefined}
-    >
-      {value}
-    </a>
-  );
-}
-
 export default async function ClientPage({
   params,
 }: {
@@ -134,7 +59,7 @@ export default async function ClientPage({
 
   const { data: client, error } = await supabase
     .from("clients")
-    .select("id, client_name, client_slug, created_at")
+    .select("id, client_name, client_slug, created_at, client_data")
     .eq("client_slug", clientPage)
     .maybeSingle<ClientRow>();
 
@@ -146,7 +71,7 @@ export default async function ClientPage({
     notFound();
   }
 
-  const details = exampleDetails;
+  const details = parseClientData(client.client_data);
 
   const { data: projectData, error: projectsError } = await supabase
     .from("projects")
@@ -207,8 +132,12 @@ export default async function ClientPage({
           ) : null}
         </div>
       </div>
-      <ClientCards/>
-      <section className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5">
+        <ClientCards
+          clientId={client.id}
+          clientData={details}
+          editable={editable}
+        />
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -256,7 +185,7 @@ export default async function ClientPage({
             />
           </CardContent>
         </Card>
-      </section>
+      </div>
     </main>
   );
 }

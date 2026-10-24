@@ -7,11 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function NewsFeedSkeleton() {
   return (
-    <Card className="border" aria-busy="true">
-      <div className="flex flex-col gap-3 px-(--card-spacing)">
-        <Skeleton className="h-5 w-24" />
+    <Card className="min-w-0 border" aria-busy="true">
+      <div className="flex min-w-0 flex-col gap-3 px-(--card-spacing)">
+        <Skeleton className="h-5 w-24 max-w-full" />
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
-          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-3 w-28 max-w-full" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-3 w-2/3" />
         </div>

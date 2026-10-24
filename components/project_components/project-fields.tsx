@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 
 /** Match global h1 (text-5xl = 3rem) with a fixed line box so edit/view don’t shift layout. */
@@ -249,8 +251,34 @@ export function ProjectDescription({
 
   const display = description || "No description yet.";
 
+  function startEditing() {
+    setDraft(description);
+    setError(null);
+    setEditing(true);
+  }
+
   return (
     <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex items-center justify-between gap-2">
+        <CardTitle>Description</CardTitle>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="shrink-0 text-muted-foreground"
+          aria-label="Edit description"
+          aria-pressed={editing}
+          disabled={pending}
+          onMouseDown={(e) => {
+            if (editing) e.preventDefault();
+          }}
+          onClick={() => {
+            if (!editing) startEditing();
+          }}
+        >
+          <Pencil />
+        </Button>
+      </div>
       {editing ? (
         <textarea
           ref={textareaRef}
@@ -281,21 +309,11 @@ export function ProjectDescription({
           className={`${descriptionClassName} cursor-text disabled:opacity-50`}
         />
       ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setDraft(description);
-            setError(null);
-            setEditing(true);
-          }}
-          className="w-full cursor-pointer text-left"
+        <p
+          className={`${descriptionClassName} whitespace-pre-wrap ${description ? "" : "opacity-70"}`}
         >
-          <span
-            className={`${descriptionClassName} block whitespace-pre-wrap ${description ? "" : "opacity-70"}`}
-          >
-            {display}
-          </span>
-        </button>
+          {display}
+        </p>
       )}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>

@@ -12,7 +12,9 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/auth')
   const isCronRoute = pathname.startsWith('/api/cron/')
-  const isPublicRoute = pathname === '/' || isAuthRoute || isCronRoute
+  const isTermsRoute = pathname === '/terms'
+  const isPublicRoute =
+    pathname === '/' || isAuthRoute || isCronRoute || isTermsRoute
   const sessionCookiePresent = hasAuthCookie(request)
   const hasOAuthCode = request.nextUrl.searchParams.has('code')
   const hasOAuthError =

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function WeatherSkeleton() {
   return (
-    <div className="flex items-center gap-1 px-1 py-0.5" aria-busy="true">
+    <div className="flex shrink-0 items-center gap-1 px-1 py-0.5" aria-busy="true">
       <Skeleton className="size-10 rounded-lg" />
       <Skeleton className="h-5 w-12" />
       <Skeleton className="size-4 rounded-sm" />

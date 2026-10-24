@@ -156,7 +156,7 @@ function QuickLinkItem({
 
 export function QuickLinksSkeleton() {
   return (
-    <div className="flex items-center gap-1" aria-busy="true">
+    <div className="flex min-w-0 items-center gap-1 overflow-hidden" aria-busy="true">
       {Array.from({ length: 5 }, (_, index) => (
         <Skeleton key={index} className="size-10 rounded-md" />
       ))}
@@ -251,6 +251,8 @@ export function QuickLinks() {
     handleOpenChange(false);
   }
 
+  const showAddLabel = hydrated && links.length === 0;
+
   return (
     <div className="relative min-w-0">
       <div
@@ -277,11 +279,17 @@ export function QuickLinks() {
             render={
               <button
                 type="button"
-                className="flex size-10 shrink-0 items-center justify-center rounded-md border border-dashed opacity-50 transition-all duration-200 hover:cursor-pointer hover:border-primary hover:bg-primary/10 hover:text-primary hover:opacity-100"
+                className={cn(
+                  "flex h-10 shrink-0 items-center justify-center rounded-md border border-dashed opacity-50 transition-all duration-200 hover:cursor-pointer hover:border-primary hover:bg-primary/10 hover:text-primary hover:opacity-100",
+                  showAddLabel ? "gap-2 px-3" : "w-10",
+                )}
               />
             }
           >
-            <Plus className="size-5" />
+            <Plus className="size-5 shrink-0" />
+            {showAddLabel ? (
+              <span className="text-sm whitespace-nowrap">Add a quick link</span>
+            ) : null}
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>

@@ -1,45 +1,48 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-function ProcessBoxSkeleton({
+function ProcessColumnSkeleton({
   titleWidth = "w-36",
-  nested = false,
+  cards = 1,
 }: {
   titleWidth?: string;
-  nested?: boolean;
+  cards?: number;
 }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border">
-      <div className="flex items-start justify-between gap-2 p-4 pb-3">
-        <div className="space-y-2">
+    <div className="flex min-w-0 flex-col gap-2 rounded-xl bg-muted p-2 ring-1 ring-foreground/8 dark:bg-card">
+      <div className="flex items-center justify-between gap-2 px-1.5 py-1">
+        <div className="flex min-w-0 items-center gap-2">
           <Skeleton className={`h-4 ${titleWidth}`} />
-          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-4 w-16 rounded-md" />
         </div>
-        <Skeleton className="size-7 rounded-md" />
+        <Skeleton className="size-5 rounded-full" />
       </div>
-      {nested ? (
-        <div className="flex flex-col gap-2 border-t bg-muted/25 px-4 py-3">
-          <div className="space-y-2 rounded-xl border bg-background p-3">
-            <Skeleton className="h-3.5 w-28" />
-            <Skeleton className="h-5 w-14 rounded-full" />
-          </div>
-          <div className="space-y-2 rounded-xl border bg-background p-3">
-            <Skeleton className="h-3.5 w-20" />
-          </div>
+      {Array.from({ length: cards }).map((_, index) => (
+        <div
+          key={index}
+          className="flex items-center gap-2 rounded-lg bg-background p-3 shadow-sm ring-1 ring-foreground/10 dark:bg-muted"
+        >
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-14 rounded-md" />
         </div>
-      ) : null}
+      ))}
+      <Skeleton className="h-7 w-full rounded-lg" />
     </div>
   );
 }
 
 export function ProcessTreeSkeleton() {
   return (
-    <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
-      <ProcessBoxSkeleton titleWidth="w-40" nested />
-      <ProcessBoxSkeleton titleWidth="w-32" />
-      <ProcessBoxSkeleton titleWidth="w-44" nested />
-      <ProcessBoxSkeleton titleWidth="w-28" />
-      <ProcessBoxSkeleton titleWidth="w-36" />
-      <ProcessBoxSkeleton titleWidth="w-24" nested />
+    <div className="grid w-full grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="flex min-w-0 flex-col gap-3">
+        <ProcessColumnSkeleton titleWidth="w-40" cards={2} />
+      </div>
+      <div className="flex min-w-0 flex-col gap-3">
+        <ProcessColumnSkeleton titleWidth="w-28" cards={1} />
+        <ProcessColumnSkeleton titleWidth="w-36" cards={1} />
+      </div>
+      <div className="hidden min-w-0 flex-col gap-3 xl:flex">
+        <ProcessColumnSkeleton titleWidth="w-32" cards={1} />
+      </div>
     </div>
   );
 }

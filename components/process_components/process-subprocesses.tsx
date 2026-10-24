@@ -24,7 +24,7 @@ export function ProcessSubprocesses({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2>Sub-processes</h2>
         <ProcessLabelFilter

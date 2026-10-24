@@ -78,29 +78,23 @@ function NewsPreviewCard({
   const hasImage = Boolean(article.imageUrl);
 
   return (
-    <div
-      className={cn(
-        "flex w-full gap-4",
-        hasImage ? "flex-col lg:flex-row lg:items-center" : "flex-col",
-      )}
-    >
+    <div className="flex w-full min-w-0 flex-col justify-center gap-2">
+      <NewsDateMeta article={article} isUnread={isUnread} />
+      <h3 className="text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg">
+        {article.title}
+      </h3>
       {hasImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={article.imageUrl!}
           alt=""
-          className="order-1 aspect-[16/9] w-full shrink-0 rounded-lg object-cover lg:order-2 lg:aspect-auto lg:size-24"
+          className="aspect-[16/9] w-full rounded-lg object-cover lg:aspect-[3/2]"
         />
-      ) : null}
-      <div className="order-2 flex min-w-0 flex-1 flex-col justify-center gap-2 lg:order-1">
-        <NewsDateMeta article={article} isUnread={isUnread} />
-        <h3 className="text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg">
-          {article.title}
-        </h3>
+      ) : (
         <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
           {formatNewsExcerpt(article.body)}
         </p>
-      </div>
+      )}
     </div>
   );
 }

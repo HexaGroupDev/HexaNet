@@ -26,13 +26,13 @@ function hourInZone(now: Date) {
 
 export function GreetingSkeleton() {
   return (
-    <div className="mb-10 flex items-start justify-between gap-6" aria-busy="true">
-      <div className="min-w-0">
-        <Skeleton className="h-8 w-64 sm:h-9 sm:w-80" />
-        <div className="mt-1.5 flex items-center gap-2">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="size-4 rounded-full" />
-          <Skeleton className="h-4 w-14" />
+    <div className="mb-10 flex min-w-0 items-start justify-between gap-4 sm:gap-6" aria-busy="true">
+      <div className="min-w-0 flex-1">
+        <Skeleton className="h-8 w-full max-w-64 sm:h-9 sm:max-w-80" />
+        <div className="mt-1.5 flex min-w-0 items-center gap-2">
+          <Skeleton className="h-4 min-w-0 max-w-40 flex-1" />
+          <Skeleton className="size-4 shrink-0 rounded-full" />
+          <Skeleton className="h-4 w-14 shrink-0" />
         </div>
       </div>
       <WeatherSkeleton />

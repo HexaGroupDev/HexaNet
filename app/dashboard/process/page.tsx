@@ -21,8 +21,8 @@ export default async function Process() {
   const processOptions = (processes ?? []).map(toProcessOption);
 
   return (
-    <main className="flex flex-col gap-10">
-      <div className="flex flex-col gap-2">
+    <main className="flex min-w-0 flex-col gap-10">
+      <div className="flex min-w-0 flex-col gap-2">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>

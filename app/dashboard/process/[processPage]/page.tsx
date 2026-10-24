@@ -10,12 +10,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AddProcess } from "@/components/process_components/add-process";
 import { ProcessDescription } from "@/components/process_components/process-fields";
 import { ProcessLinks } from "@/components/process_components/process-links";
@@ -100,7 +95,7 @@ export default async function ProcessPage({
   const descendants = collectDescendants(process.id, processOptions);
 
   return (
-    <main className="flex flex-col gap-10">
+    <main className="flex min-w-0 flex-col gap-10">
       <div className="flex flex-col gap-2">
         <Breadcrumb>
           <BreadcrumbList>
@@ -157,7 +152,6 @@ export default async function ProcessPage({
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Description</CardTitle>
           <ProcessDescription
             processId={process.id}
             initialDescription={description}

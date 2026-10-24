@@ -173,7 +173,6 @@ export default async function ProjectPage({
         <div className="flex min-w-0 flex-col gap-5">
           <Card>
             <CardHeader>
-              <CardTitle>Description</CardTitle>
               <ProjectDescription
                 projectId={project.project_id}
                 initialDescription={project.project_description}

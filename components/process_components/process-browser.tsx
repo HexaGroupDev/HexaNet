@@ -19,16 +19,16 @@ export function ProcessBrowser({
     useFilteredProcesses(processes);
 
   return (
-    <div className="flex flex-col gap-10">
-      <div className="flex items-center justify-between">
+    <div className="flex w-full min-w-0 flex-col gap-6">
+      <div className="flex items-center justify-between gap-4">
         <h1>Processes</h1>
-        <div>
+        <div className="flex shrink-0 items-center gap-1">
           <ProcessLabelFilter
             labels={labels}
             selectedLabels={selectedLabels}
             onSelectedLabelsChange={setSelectedLabels}
           />
-          <AddProcess processes={processes} />
+          <AddProcess processes={processes} ariaLabel="Add process" />
         </div>
       </div>
       {error ? (

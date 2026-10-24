@@ -6,7 +6,7 @@ export default function ProcessLoading() {
     <main className="flex flex-col gap-10" aria-busy="true">
       <div className="flex flex-col gap-2">
         <Skeleton className="h-3 w-44" />
-        <div className="flex flex-col gap-10">
+        <div className="flex min-w-0 flex-col gap-6">
           <div className="flex items-center justify-between">
             <Skeleton className="h-8 w-36" />
             <div className="flex items-center gap-1">

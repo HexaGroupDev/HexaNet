@@ -25,7 +25,7 @@ export function DashboardSkeleton() {
             <SocialMediaWallSkeleton />
           </div>
         </div>
-        <div className="contents md:flex md:flex-col md:gap-3">
+        <div className="contents md:flex md:min-w-0 md:flex-col md:gap-3">
           <div className="order-1 min-w-0">
             <CalendarSkeleton />
           </div>
