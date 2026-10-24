@@ -53,8 +53,10 @@ function SocialPostCard({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
   const published = formatPublishedAt(slide.publishedAt);
-  const showVideo = Boolean(slide.videoUrl) && !videoFailed;
-  const placeholder = !slide.videoUrl && !slide.thumbnailUrl && !slide.caption;
+  const showEmbed = Boolean(slide.embedUrl) && active;
+  const showVideo = Boolean(slide.videoUrl) && !videoFailed && !showEmbed;
+  const placeholder =
+    !slide.videoUrl && !slide.thumbnailUrl && !slide.caption && !slide.embedUrl;
   const chrome = PLATFORM_CHROME[slide.platform];
 
   useEffect(() => {
@@ -101,7 +103,23 @@ function SocialPostCard({
 
   const media = (
     <div className="absolute inset-0 overflow-hidden bg-muted">
-      {showVideo ? (
+      {showEmbed ? (
+        <>
+          {slide.thumbnailUrl ? (
+            <img
+              src={slide.thumbnailUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+          <iframe
+            src={slide.embedUrl ?? undefined}
+            title={slide.caption || `${slide.label} video`}
+            allow="autoplay; fullscreen"
+            className="pointer-events-none absolute inset-0 h-full w-full border-0"
+          />
+        </>
+      ) : showVideo ? (
         <video
           ref={videoRef}
           src={slide.videoUrl ?? undefined}

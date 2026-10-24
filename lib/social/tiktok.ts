@@ -3,6 +3,7 @@ export type TikTokPost = {
   videoId: string;
   handle: string;
   postUrl: string;
+  embedUrl: string;
   caption: string | null;
   thumbnailUrl: string | null;
   videoUrl: string | null;
@@ -36,10 +37,29 @@ export function publishedAtFromVideoId(videoId: string) {
   }
 }
 
+/** Silent looping player. TikTok's Display API does not return a video file. */
+export function tikTokEmbedUrl(videoId: string) {
+  const url = new URL(`https://www.tiktok.com/player/v1/${videoId}`);
+  url.searchParams.set("autoplay", "1");
+  url.searchParams.set("loop", "1");
+  url.searchParams.set("muted", "1");
+  url.searchParams.set("controls", "0");
+  url.searchParams.set("progress_bar", "0");
+  url.searchParams.set("play_button", "0");
+  url.searchParams.set("volume_control", "0");
+  url.searchParams.set("fullscreen_button", "0");
+  url.searchParams.set("timestamp", "0");
+  url.searchParams.set("music_info", "0");
+  url.searchParams.set("description", "0");
+  url.searchParams.set("rel", "0");
+  url.searchParams.set("closed_caption", "0");
+  return url.toString();
+}
+
 export function toPost(
   handle: string,
   videoId: string,
-  extras: Partial<Omit<TikTokPost, "platform" | "videoId" | "handle" | "postUrl">> = {},
+  extras: Partial<Omit<TikTokPost, "platform" | "videoId" | "handle" | "postUrl" | "embedUrl">> = {},
 ): TikTokPost {
   const cleanHandle = handle.replace(/^@/, "");
   return {
@@ -47,6 +67,7 @@ export function toPost(
     videoId,
     handle: cleanHandle,
     postUrl: `https://www.tiktok.com/@${cleanHandle}/video/${videoId}`,
+    embedUrl: tikTokEmbedUrl(videoId),
     caption: extras.caption ?? null,
     thumbnailUrl: extras.thumbnailUrl ?? null,
     videoUrl: extras.videoUrl ?? null,

@@ -3,15 +3,16 @@ import { NextResponse } from "next/server";
 import {
   TIKTOK_OAUTH_STATE_COOKIE,
   exchangeTikTokAuthorizationCode,
-  fetchLatestTikTokVideo,
+  persistTikTokAuthorization,
   requireTikTokAdmin,
   tikTokStateCookieOptions,
   tikTokStatesMatch,
 } from "@/lib/social/tiktok-oauth";
+import { getRequestOrigin } from "@/lib/supabase/request-origin";
 
 export const dynamic = "force-dynamic";
 
-function finish(body: { error: string } | { videos: unknown[] }, status: number) {
+function finish(body: { error: string }, status: number) {
   const response = NextResponse.json(body, { status });
   response.cookies.set(
     TIKTOK_OAUTH_STATE_COOKIE,
@@ -56,15 +57,22 @@ export async function GET(request: Request) {
     return finish({ error: "TikTok authorization could not be verified." }, 400);
   }
 
-  const accessToken = await exchangeTikTokAuthorizationCode(code);
-  if (!accessToken) {
+  const token = await exchangeTikTokAuthorizationCode(code);
+  if (!token) {
     return finish({ error: "TikTok token exchange failed." }, 502);
   }
 
-  const videos = await fetchLatestTikTokVideo(accessToken);
-  if (!videos) {
-    return finish({ error: "TikTok video list failed." }, 502);
+  const saved = await persistTikTokAuthorization(token);
+  if (!saved) {
+    return finish({ error: "TikTok account could not be saved." }, 502);
   }
 
-  return finish({ videos }, 200);
+  const response = NextResponse.redirect(`${getRequestOrigin(request)}/dashboard`);
+  response.cookies.set(
+    TIKTOK_OAUTH_STATE_COOKIE,
+    "",
+    tikTokStateCookieOptions(0),
+  );
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }

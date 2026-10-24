@@ -7,6 +7,7 @@ export type SocialSlide = {
   caption: string | null;
   thumbnailUrl: string | null;
   videoUrl: string | null;
+  embedUrl?: string | null;
   authorName: string | null;
   handle: string | null;
   publishedAt: string | null;

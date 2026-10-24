@@ -1,10 +1,9 @@
-import { scrapeLatestTikTokVideo } from "@/lib/social/scrape-tiktok";
+import { fetchLatestTikTokPost } from "@/lib/social/tiktok-oauth";
 import {
-  needsPersistedTikTokMedia,
+  isEphemeralTikTokMediaUrl,
   persistTikTokMedia,
 } from "@/lib/social/persist-tiktok-media";
 import {
-  isTikTokUrl,
   parseTikTokVideoUrl,
   toPost,
   type TikTokPost,
@@ -44,38 +43,17 @@ function rowToPost(row: Record<string, unknown>): TikTokPost | null {
   return toPost(parsed.handle, parsed.videoId, {
     caption: asString(row.text),
     thumbnailUrl: asString(row.thumbnail_url),
-    videoUrl: asString(row.media_url),
     authorName: asString(row.author_name) ?? parsed.handle,
     publishedAt: asString(row.created_at) ?? undefined,
   });
 }
 
-function hasMedia(post: TikTokPost) {
-  return Boolean(post.videoUrl || post.thumbnailUrl);
+function isPersisted(url: string | null) {
+  return Boolean(url) && !isEphemeralTikTokMediaUrl(url);
 }
 
-function hasPlayableMedia(post: TikTokPost) {
-  return hasMedia(post) && !needsPersistedTikTokMedia(post);
-}
-
-async function loadProfileUrls() {
-  const supabase = await getSocialReadClient();
-  const { data, error } = await withJwtSkewRetry(() =>
-    supabase
-      .from("social_embed_urls")
-      .select("url")
-      .eq("enabled", true)
-      .order("sort_order", { ascending: true }),
-  );
-
-  if (error) {
-    console.error("Failed to load TikTok profile URLs:", error.message);
-    return [];
-  }
-
-  return (data ?? [])
-    .map((row) => asString((row as { url?: unknown }).url))
-    .filter((url): url is string => !!url && isTikTokUrl(url));
+function hasPlayableCover(post: TikTokPost) {
+  return isPersisted(post.thumbnailUrl);
 }
 
 async function loadCachedPosts(): Promise<TikTokPost[]> {
@@ -84,7 +62,7 @@ async function loadCachedPosts(): Promise<TikTokPost[]> {
     supabase
       .from("social_posts")
       .select(
-        "author_name, text, media_url, thumbnail_url, post_url, created_at, fetched_at",
+        "author_name, text, thumbnail_url, post_url, created_at, fetched_at",
       )
       .eq("platform", "tiktok")
       .order("fetched_at", { ascending: false }),
@@ -116,11 +94,9 @@ async function cachePost(post: TikTokPost) {
   const admin = tryAdminClient();
   if (!admin) return false;
 
+  const wantedCover = Boolean(post.thumbnailUrl);
   const persisted = await persistTikTokMedia(admin, post);
-  if (!hasMedia(persisted)) {
-    console.error("TikTok post has no playable media after persist.");
-    return false;
-  }
+  const coverUrl = isPersisted(persisted.thumbnailUrl) ? persisted.thumbnailUrl : null;
 
   const now = new Date().toISOString();
   const { error } = await admin.from("social_posts").upsert(
@@ -129,9 +105,9 @@ async function cachePost(post: TikTokPost) {
       external_id: persisted.videoId,
       author_name: persisted.authorName,
       text: persisted.caption,
-      media_url: persisted.videoUrl,
-      thumbnail_url: persisted.thumbnailUrl,
-      media_type: "video",
+      media_url: null,
+      thumbnail_url: coverUrl,
+      media_type: null,
       post_url: persisted.postUrl,
       created_at: persisted.publishedAt,
       fetched_at: now,
@@ -143,12 +119,20 @@ async function cachePost(post: TikTokPost) {
     console.error("Failed to cache TikTok post:", error.message);
     return false;
   }
+
+  if (wantedCover && !coverUrl) {
+    await admin.from("social_sync_state").upsert({
+      id: SYNC_ID,
+      last_updated: EPOCH,
+    });
+    return false;
+  }
   return true;
 }
 
-async function syncIfStale(profileUrls: string[], cached: TikTokPost[]) {
+async function syncIfStale(cached: TikTokPost[]) {
   const admin = tryAdminClient();
-  if (!admin || profileUrls.length === 0) return;
+  if (!admin) return;
 
   const { data, error } = await admin
     .from("social_sync_state")
@@ -174,22 +158,17 @@ async function syncIfStale(profileUrls: string[], cached: TikTokPost[]) {
   const lastUpdated = Date.parse(String(data?.last_updated ?? EPOCH));
   const fresh =
     Number.isFinite(lastUpdated) && Date.now() - lastUpdated < STALE_AFTER_MS;
-  const incomplete =
-    cached.length === 0 || cached.some((post) => !hasPlayableMedia(post));
+  const incomplete = cached.length === 0 || cached.some((post) => !hasPlayableCover(post));
   if (fresh && !incomplete) return;
 
   try {
-    let saved = 0;
-    for (const profileUrl of profileUrls) {
-      const post = await scrapeLatestTikTokVideo(profileUrl);
-      if (!post) continue;
-      if (await cachePost(post)) saved += 1;
-    }
-
-    if (saved === 0) {
-      console.error("TikTok scrape returned no videos.");
+    const post = await fetchLatestTikTokPost();
+    if (!post) {
+      console.warn("TikTok Display API returned no video.");
       return;
     }
+
+    if (!(await cachePost(post))) return;
 
     const { error: stampError } = await admin.from("social_sync_state").upsert({
       id: SYNC_ID,
@@ -199,13 +178,12 @@ async function syncIfStale(profileUrls: string[], cached: TikTokPost[]) {
       console.error("Failed to stamp TikTok sync:", stampError.message);
     }
   } catch (syncError) {
-    console.error("TikTok scrape failed:", syncError);
+    console.error("TikTok Display API sync failed:", syncError);
   }
 }
 
 export async function loadTikTokPosts(): Promise<TikTokPost[]> {
-  const profileUrls = await loadProfileUrls();
   const cached = latestPerHandle(await loadCachedPosts());
-  await syncIfStale(profileUrls, cached);
+  await syncIfStale(cached);
   return latestPerHandle(await loadCachedPosts());
 }
